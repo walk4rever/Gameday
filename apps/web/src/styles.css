@@ -1,0 +1,1554 @@
+/* ==========================================================================
+   掼蛋 (Guandan) 全局高品质拟真牌桌与扑克牌 UI / UX 样式系统
+   适配手机竖屏优先、流畅支持触控与滑动连选、典雅绿色毛毡台面与生动动效
+   ========================================================================== */
+
+:root {
+  --table-felt-bg: radial-gradient(circle at 50% 36%, #135d37 0%, #0c3d24 58%, #072616 100%);
+  --table-rim-color: #2b1810;
+  --gold-primary: #f59e0b;
+  --gold-glow: rgba(245, 158, 11, 0.45);
+  --green-accent: #10b981;
+  --red-accent: #ef4444;
+  --card-width: 66px;
+  --card-height: 94px;
+  --font-system: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', system-ui, sans-serif;
+  --font-poker: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--font-system);
+  background: var(--table-felt-bg);
+  background-color: #0c3d24;
+  color: #f8fafc;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  padding: 8px 10px;
+}
+
+/* ==========================================================================
+   通用按钮与交互元件
+   ========================================================================== */
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  border: none;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.primary-action-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1c1917;
+  font-weight: 700;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  font-size: 1.05rem;
+  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.secondary-action-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 0.92rem;
+  backdrop-filter: blur(8px);
+}
+
+.pulse-glow {
+  animation: pulse-glow-anim 2s infinite alternate;
+}
+
+@keyframes pulse-glow-anim {
+  0% {
+    box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+  }
+  100% {
+    box-shadow: 0 4px 22px rgba(245, 158, 11, 0.75), 0 0 0 3px rgba(245, 158, 11, 0.3);
+  }
+}
+
+/* ==========================================================================
+   1. 登入 / 欢迎界面 (JoinScreen)
+   ========================================================================== */
+
+.join-screen-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+}
+
+.join-card {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-align: center;
+}
+
+.join-brand {
+  margin-bottom: 24px;
+}
+
+.join-suits-emblem {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.5rem;
+  margin-bottom: 6px;
+}
+
+.suit-spade,
+.suit-club {
+  color: #cbd5e1;
+}
+
+.suit-heart,
+.suit-diamond {
+  color: #ef4444;
+}
+
+.join-title {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+}
+
+.join-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.join-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.join-label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.join-input-with-action {
+  display: flex;
+  gap: 8px;
+}
+
+.join-input-group input,
+.join-input-with-action input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #f8fafc;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.join-input-group input:focus,
+.join-input-with-action input:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+}
+
+.btn-dice {
+  width: 46px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-dice:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.join-btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.join-helper-actions {
+  margin-top: 20px;
+}
+
+.text-action-btn {
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.86rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  padding: 6px;
+}
+
+/* ==========================================================================
+   2. 房间大厅界面 (LobbyScreen)
+   ========================================================================== */
+
+.lobby-page {
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lobby-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.lobby-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fef08a;
+}
+
+.room-id-tag {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.lobby-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.share-btn {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.share-btn.copied {
+  background: #10b981;
+  color: #064e3b;
+  border-color: #10b981;
+}
+
+/* 牌桌方位俯瞰图 */
+.lobby-table-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 10px;
+}
+
+.lobby-felt-oval {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  height: 320px;
+  border-radius: 120px;
+  background: radial-gradient(ellipse at center, #17683e 0%, #0d4427 60%, #062817 100%);
+  border: 8px solid #231812;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lobby-center-watermark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.12);
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  pointer-events: none;
+}
+
+.lobby-table-desc {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.lobby-pos {
+  position: absolute;
+  z-index: 2;
+}
+
+.lobby-pos-top {
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.lobby-pos-bottom {
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.lobby-pos-left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lobby-pos-right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lobby-seat-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 8px 12px;
+  min-width: 120px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+.lobby-seat-self {
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+}
+
+.lobby-seat-avatar {
+  position: relative;
+  font-size: 1.3rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.online-pulse-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 1.5px solid #0f172a;
+}
+
+.lobby-seat-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lobby-seat-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lobby-seat-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 68px;
+}
+
+.lobby-role-badge {
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.badge-team-red {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-team-blue {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.lobby-seat-status {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.lobby-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.lobby-start-btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 20px;
+  font-size: 1.15rem;
+}
+
+.lobby-tips {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-align: center;
+}
+
+/* ==========================================================================
+   3. 核心牌桌界面 (GameScreen)
+   ========================================================================== */
+
+.game-screen-container {
+  gap: 6px;
+  height: 100dvh;
+}
+
+/* 顶部状态条 */
+.game-top-bar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 7px 12px;
+}
+
+.top-level-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fef08a;
+}
+
+.crown-icon {
+  font-size: 1.1rem;
+}
+
+.level-wild-hint {
+  font-size: 0.72rem;
+  color: #fca5a5;
+  font-weight: 500;
+}
+
+.top-bar-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.top-icon-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.top-icon-btn.muted {
+  opacity: 0.6;
+}
+
+/* 牌桌毛毡椭圆台面 */
+.felt-table-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.felt-table-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-height: 480px;
+  border-radius: 28px;
+  background: radial-gradient(ellipse at center, #15623b 0%, #0d4226 65%, #072616 100%);
+  border: 6px solid #231812;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55), inset 0 0 36px rgba(0, 0, 0, 0.45);
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    '.    top    .'
+    'left center right'
+    '.    self   .';
+  gap: 8px 4px;
+  padding: 8px 6px;
+  overflow: hidden;
+}
+
+.felt-center-watermark {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.08);
+  font-weight: 900;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.felt-watermark-text {
+  font-size: 2.2rem;
+  letter-spacing: 4px;
+}
+
+.felt-watermark-sub {
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+}
+
+.table-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  z-index: 2;
+}
+
+.zone-top {
+  grid-area: top;
+}
+
+.zone-left {
+  grid-area: left;
+  justify-content: center;
+}
+
+.zone-right {
+  grid-area: right;
+  justify-content: center;
+}
+
+.zone-self {
+  grid-area: self;
+  justify-content: flex-end;
+  padding-bottom: 2px;
+}
+
+/* 座位卡片 */
+.table-seat-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 4px 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+  min-width: 84px;
+}
+
+.table-seat-card.seat-active {
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.6), inset 0 0 8px rgba(245, 158, 11, 0.25);
+  transform: scale(1.03);
+}
+
+.seat-avatar-wrap {
+  position: relative;
+}
+
+.seat-avatar {
+  font-size: 1.15rem;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seat-online-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 1.5px solid #0f172a;
+}
+
+.thinking-beacon {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  background: #f59e0b;
+  border-radius: 50%;
+  animation: beacon-ping 1.2s infinite;
+}
+
+@keyframes beacon-ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+.seat-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.seat-top-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seat-display-name {
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+
+.seat-role-pill {
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.pill-partner {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.pill-rival {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+
+.seat-count-badge {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+}
+
+.seat-count-badge.count-warning {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.seat-count-badge.count-urgent {
+  color: #ef4444;
+  font-weight: 800;
+  animation: urgent-blink 1s infinite alternate;
+}
+
+@keyframes urgent-blink {
+  0% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  }
+}
+
+.seat-finished-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #f59e0b;
+}
+
+/* 打出的牌区域 */
+.trick-slot {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.trick-slot.empty {
+  min-height: 48px;
+}
+
+.trick-pass-bubble {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.trick-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fef08a;
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 999px;
+  padding: 1px 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+.trick-winning .trick-tag {
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.winning-star {
+  font-size: 0.75rem;
+}
+
+.trick-cards-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trick-card-wrapper {
+  position: relative;
+  transition: transform 0.2s;
+}
+
+/* 桌面小牌 */
+.table-mini-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 26px;
+  height: 38px;
+  background: #ffffff;
+  border-radius: 4px;
+  padding: 2px 1px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-poker);
+  line-height: 1;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.table-mini-card.card-black {
+  color: #1e293b;
+}
+
+.table-mini-card.card-red {
+  color: #dc2626;
+}
+
+.mini-rank {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.mini-suit-icon {
+  font-size: 0.65rem;
+}
+
+/* ==========================================================================
+   4. 实时裁判智能指导条 (Play Coach Bar)
+   ========================================================================== */
+
+.play-coach-bar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  min-height: 34px;
+  padding: 2px 4px;
+}
+
+.coach-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  max-width: 96%;
+  animation: coach-fade-in 0.2s ease-out;
+}
+
+@keyframes coach-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.coach-pill.pill-valid {
+  background: rgba(16, 185, 129, 0.28);
+  border: 1px solid #10b981;
+  color: #a7f3d0;
+}
+
+.coach-pill.pill-invalid {
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid #ef4444;
+  color: #fecaca;
+}
+
+.coach-pill.pill-turn {
+  background: rgba(245, 158, 11, 0.22);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  color: #fde68a;
+}
+
+.coach-pill.pill-wait {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.coach-name {
+  font-weight: 800;
+}
+
+.coach-detail {
+  font-size: 0.8rem;
+}
+
+.coach-clear-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  margin-left: 4px;
+}
+
+.game-error-toast {
+  flex: 0 0 auto;
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================================================
+   5. 手牌扇形展示与高质感扑克牌 (PlayingCard & HandFan)
+   ========================================================================== */
+
+.hand-fan-area {
+  flex: 0 0 auto;
+  position: relative;
+  width: 100%;
+  height: 136px;
+  margin-top: auto;
+  touch-action: none;
+}
+
+.hand-fan-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* 单张扑克牌 */
+.card {
+  position: absolute;
+  bottom: 0;
+  width: var(--card-width);
+  height: var(--card-height);
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-poker);
+  padding: 0;
+  transform-origin: 50% 120%;
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.16s ease;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  filter: brightness(1.02);
+}
+
+.card.card-black {
+  color: #1e293b;
+}
+
+.card.card-red {
+  color: #dc2626;
+}
+
+/* 选中与提示高亮 */
+.card.card-selected {
+  box-shadow: 0 0 0 2.5px #f59e0b, 0 12px 24px rgba(0, 0, 0, 0.55);
+}
+
+.card.card-hinted {
+  box-shadow: 0 0 0 2.5px #10b981, 0 8px 16px rgba(16, 185, 129, 0.45);
+}
+
+.card:disabled {
+  opacity: 0.92;
+}
+
+/* 级牌与逢人配角标 */
+.card-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 3px;
+  line-height: 1;
+  z-index: 5;
+}
+
+.card-badge-level {
+  background: #f59e0b;
+  color: #78350f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.card-badge-wild {
+  background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.4);
+  animation: wild-sheen 1.5s infinite alternate;
+}
+
+@keyframes wild-sheen {
+  0% {
+    filter: brightness(1);
+  }
+  100% {
+    filter: brightness(1.25);
+  }
+}
+
+/* 角标：左上角、右下角 */
+.card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.card-corner-top {
+  top: 3px;
+  left: 4px;
+}
+
+.card-corner-bottom {
+  bottom: 3px;
+  right: 4px;
+  transform: rotate(180deg);
+}
+
+.card-rank {
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+}
+
+.card-suit-small {
+  font-size: 0.72rem;
+  margin-top: 1px;
+}
+
+/* 中间高精度大花色水印 */
+.card-center {
+  position: absolute;
+  top: 52%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0.78;
+}
+
+.card-suit-large {
+  font-size: 1.9rem;
+}
+
+/* 大小王牌专属面容 */
+.card-big-joker {
+  background: linear-gradient(180deg, #ffffff 0%, #fff1f2 100%);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.card-small-joker {
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  border-color: rgba(71, 85, 105, 0.3);
+}
+
+.card-joker-body {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.card-joker-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-joker-icon {
+  font-size: 1.3rem;
+}
+
+.card-joker-title {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   6. 底部操作栏 (Controls Bar)
+   ========================================================================== */
+
+.game-action-controls {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  padding: 4px 0 6px;
+}
+
+.btn-pass,
+.btn-hint,
+.btn-play {
+  flex: 1;
+  padding: 13px 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-pass {
+  background: rgba(71, 85, 105, 0.6);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-pass:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.3);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.btn-hint {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+}
+
+.btn-hint:disabled {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+}
+
+.btn-play {
+  flex: 1.4;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 1.15rem;
+}
+
+.btn-play.pulse-ready {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1c1917;
+  animation: pulse-glow-anim 1.5s infinite alternate;
+}
+
+.btn-play:disabled {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   7. 弹窗系统 (Modals: 规则指南 & 结算颁奖台)
+   ========================================================================== */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: modal-fade-in 0.2s ease-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 规则指南弹窗 */
+.rules-modal {
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.rules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rules-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #fef08a;
+}
+
+.rules-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.rules-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.rules-section h3 {
+  margin: 0 0 6px;
+  font-size: 0.98rem;
+  color: #38bdf8;
+}
+
+.rules-section p {
+  margin: 0;
+}
+
+.rules-tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tier-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.tier-item.tier-god {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.tier-item.tier-highlight {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.tier-rank {
+  font-weight: 800;
+  font-size: 0.75rem;
+  color: #f59e0b;
+}
+
+.tier-title {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.tier-desc {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.rules-card-types,
+.rules-scores {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rules-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+}
+
+/* 结算颁奖台弹窗 */
+.round-over-modal {
+  background: #0f172a;
+  border: 2px solid #f59e0b;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.7);
+  animation: modal-scale-up 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes modal-scale-up {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.round-result-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.round-result-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #fef08a;
+}
+
+.round-result-subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #94a3b8;
+}
+
+.level-bonus-tag {
+  margin-top: 4px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.bonus-positive {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.bonus-negative {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+.podium-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.podium-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+}
+
+.podium-card.podium-self {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.podium-rank-badge {
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.podium-player-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.podium-player-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.podium-relation-tag {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.tag-friend {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.tag-rival {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+
+.round-modal-actions {
+  width: 100%;
+}
+
+.round-modal-actions button {
+  width: 100%;
+}
+
+/* ==========================================================================
+   8. 连接中断与提示条
+   ========================================================================== */
+
+.online-reconnecting-banner {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.9);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.pulse-warning-dot {
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border-radius: 50%;
+  animation: beacon-ping 1s infinite;
+}
+
+.connecting-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.connecting-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #f59e0b;
+  border-radius: 50%;
+  animation: spinner-spin 0.8s linear infinite;
+}
+
+@keyframes spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.connecting-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #cbd5e1;
+}

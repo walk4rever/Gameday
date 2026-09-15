@@ -1,0 +1,19 @@
+{
+  "name": "gameday",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Gameday — 家庭联机游戏平台（掼蛋等），手机端即开即玩",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.2"
+}
