@@ -108,8 +108,18 @@ export class Room extends DurableObject<Env> {
     });
     server.addEventListener('close', () => {
       this.connections = this.connections.filter((c) => c.ws !== server);
-      if (
-        this.room.game !== null &&
+
+      // 如果在大厅等待阶段（尚未开牌）：某玩家离开且无活跃连接，还原该座位为机器人，
+      // 保持大厅始终干净，不会留下死座或幽灵离线者
+      if (this.room.game === null) {
+        for (let i = 0; i < this.room.seats.length; i++) {
+          const s = this.room.seats[i];
+          if (s && s.playerId && !this.connections.some((c) => c.playerId === s.playerId)) {
+            this.room.seats[i] = { playerId: null, name: `机器人 ${i + 1}` };
+          }
+        }
+        void this.save();
+      } else if (
         !isRoundOver(this.room.game) &&
         this.isBotControlled(this.room, this.room.game.currentTurn)
       ) {
@@ -132,43 +142,71 @@ export class Room extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  /**
+   * 自动重名排重：如果房间内已有其他真人叫相同名字，自动编号为 "Name (2)", "Name (3)"...
+   */
+  private disambiguateName(
+    requestedName: string,
+    currentSeatIndex: number | null,
+    room: StoredRoom
+  ): string {
+    const trimmed = requestedName.trim().slice(0, 12) || '玩家';
+
+    // 收集其他真人占用的名字（排除自己当前座位）
+    const otherNames = new Set<string>();
+    for (let i = 0; i < room.seats.length; i++) {
+      if (currentSeatIndex !== null && i === currentSeatIndex) continue;
+      const s = room.seats[i];
+      if (s && s.playerId !== null) {
+        otherNames.add(s.name);
+      }
+    }
+
+    if (!otherNames.has(trimmed)) {
+      return trimmed;
+    }
+
+    let counter = 2;
+    while (otherNames.has(`${trimmed} (${counter})`)) {
+      counter++;
+    }
+    return `${trimmed} (${counter})`;
+  }
+
   private assignSeat(room: StoredRoom, playerId: string, name: string): Seat | null {
-    // 1. 同一个 playerId 认回原座位
+    // 1. 同一个 playerId 认回原座位（严格凭设备凭证认座，杜绝同名顶号）
     const existing = room.seats.findIndex((s) => s.playerId === playerId);
     if (existing !== -1) {
       const seat = existing as Seat;
-      room.seats[seat] = { playerId, name };
+      const finalName = this.disambiguateName(name, seat, room);
+      room.seats[seat] = { playerId, name: finalName };
       return seat;
     }
 
-    // 2. 如果同名且当前处于离线状态的座位（换端口、换浏览器、隐身模式等重连），认领回该座位
-    const sameNameOfflineIndex = room.seats.findIndex(
-      (s) => s.name === name && !this.connections.some((c) => c.playerId === s.playerId)
-    );
-    if (sameNameOfflineIndex !== -1) {
-      const seat = sameNameOfflineIndex as Seat;
-      room.seats[seat] = { playerId, name };
-      return seat;
-    }
-
-    // 3. 空闲座位 (playerId === null)
+    // 2. 空闲座位 (playerId === null)
     const emptySeatIndex = room.seats.findIndex((s) => s.playerId === null);
     if (emptySeatIndex !== -1) {
       const seat = emptySeatIndex as Seat;
-      room.seats[seat] = { playerId, name };
+      const finalName = this.disambiguateName(name, seat, room);
+      room.seats[seat] = { playerId, name: finalName };
       return seat;
     }
 
-    // 4. 如果所有座位都有人占过，但当前有座位处于离线状态，允许认领离线座位
-    const offlineSeatIndex = room.seats.findIndex(
-      (s) => !this.connections.some((c) => c.playerId === s.playerId)
-    );
-    if (offlineSeatIndex !== -1) {
-      const seat = offlineSeatIndex as Seat;
-      room.seats[seat] = { playerId, name };
-      return seat;
+    // 3. 如果大厅阶段（未开局），有座位处于离线状态（之前进来看过但关了网页的玩家）：
+    //    允许新玩家顶替该空闲座位进大厅
+    if (room.game === null) {
+      const offlineSeatIndex = room.seats.findIndex(
+        (s) => !this.connections.some((c) => c.playerId === s.playerId)
+      );
+      if (offlineSeatIndex !== -1) {
+        const seat = offlineSeatIndex as Seat;
+        const finalName = this.disambiguateName(name, seat, room);
+        room.seats[seat] = { playerId, name: finalName };
+        return seat;
+      }
     }
 
+    // 4. 对局已在进行中且 4 人满员，不可顶替
     return null;
   }
 
