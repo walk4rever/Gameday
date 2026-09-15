@@ -2,6 +2,11 @@ name = "gameday"
 main = "src/index.ts"
 compatibility_date = "2026-09-01"
 
+routes = [
+  { pattern = "gameday.air7fun.com", custom_domain = true },
+  { pattern = "gd.air7fun.com", custom_domain = true }
+]
+
 # apps/web 编译出的静态文件（HTML/JS/CSS），跟 /ws 这个 WebSocket 接口
 # 一起从同一个 Worker 发布，只有一次部署、一个域名。部署前必须先跑
 # `pnpm --filter @guandan/web build`，见 package.json 的 deploy 脚本。
