@@ -1,6 +1,6 @@
 {
   "name": "gameday",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "description": "Gameday — 家庭联机游戏平台（掼蛋等），手机端即开即玩",
   "type": "module",
