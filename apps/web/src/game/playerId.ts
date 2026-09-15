@@ -5,7 +5,10 @@ export function getOrCreatePlayerId(): string {
   const existing = localStorage.getItem(STORAGE_KEY);
   if (existing) return existing;
 
-  const id = crypto.randomUUID();
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : 'p_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
   localStorage.setItem(STORAGE_KEY, id);
   return id;
 }

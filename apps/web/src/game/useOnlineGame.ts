@@ -27,30 +27,63 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const url = new URL(serverUrl);
-    url.searchParams.set('playerId', playerId);
-    url.searchParams.set('name', name);
+    let unmounted = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
-    setStatus('connecting');
+    function connect() {
+      if (unmounted) return;
+      const url = new URL(serverUrl);
+      url.searchParams.set('playerId', playerId);
+      url.searchParams.set('name', name);
 
-    ws.addEventListener('open', () => setStatus('open'));
-    ws.addEventListener('close', () => setStatus('closed'));
-    ws.addEventListener('error', () => setStatus('closed'));
-    ws.addEventListener('message', (event) => {
-      const data = JSON.parse(event.data as string) as ServerMessage;
-      if (data.type === 'error') {
-        setError(data.message);
-      } else {
-        setMessage(data);
-        setError(null);
-      }
-    });
+      setStatus('connecting');
+      const ws = new WebSocket(url.toString());
+      wsRef.current = ws;
+
+      ws.addEventListener('open', () => {
+        if (unmounted) return;
+        setStatus('open');
+      });
+
+      ws.addEventListener('close', () => {
+        if (unmounted) return;
+        setStatus('closed');
+        // 自动重连：1.5 秒后再次尝试，确保网络恢复或切换时自动上线
+        reconnectTimer = setTimeout(() => {
+          connect();
+        }, 1500);
+      });
+
+      ws.addEventListener('error', () => {
+        if (unmounted) return;
+        setStatus('closed');
+      });
+
+      ws.addEventListener('message', (event) => {
+        if (unmounted) return;
+        try {
+          const data = JSON.parse(event.data as string) as ServerMessage;
+          if (data.type === 'error') {
+            setError(data.message);
+          } else {
+            setMessage(data);
+            setError(null);
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e);
+        }
+      });
+    }
+
+    connect();
 
     return () => {
-      wsRef.current = null;
-      ws.close();
+      unmounted = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
   }, [serverUrl, playerId, name]);
 

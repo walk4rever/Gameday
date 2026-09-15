@@ -11,6 +11,16 @@ export { Room } from './room.js';
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // 线上环境强制升级为 HTTPS，避免非安全环境下 WebSocket 被运营商/代理拦截
+    if (
+      url.protocol === 'http:' &&
+      !url.hostname.includes('localhost') &&
+      !url.hostname.includes('127.0.0.1')
+    ) {
+      url.protocol = 'https:';
+      return Response.redirect(url.toString(), 301);
+    }
     if (url.pathname === '/ws') {
       const roomName = url.searchParams.get('room') ?? 'default';
       const id = env.ROOM.idFromName(roomName);
