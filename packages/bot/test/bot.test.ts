@@ -38,7 +38,7 @@ describe('chooseBotPlay：领出新一轮', () => {
     expect(move?.[0]?.rank).toBe('3');
   });
 
-  it('领出时即使手里有可组成炸弹的点数，也拆开先出一张，不整体打出炸弹', () => {
+  it('领出时如果手牌仅剩炸弹，整体打出炸弹赢得对局', () => {
     const hand = [card('spade', '9'), card('heart', '9'), card('club', '9'), card('diamond', '9')];
     const move = chooseBotPlay({
       hand,
@@ -47,8 +47,61 @@ describe('chooseBotPlay：领出新一轮', () => {
       isLastPlayFromPartner: false,
       partnerHandSize: 27
     });
-    expect(move).toHaveLength(1);
-    expect(move?.[0]?.rank).toBe('9');
+    expect(move).toHaveLength(4);
+  });
+
+  it('领出时手牌有顺子和散单张，优先打出顺子快速减牌', () => {
+    const hand = [
+      card('spade', '3'),
+      card('heart', '4'),
+      card('club', '5'),
+      card('diamond', '6'),
+      card('spade', '7'),
+      card('heart', 'J'),
+      card('diamond', 'K')
+    ];
+    const move = chooseBotPlay({
+      hand,
+      lastPlay: null,
+      level,
+      isLastPlayFromPartner: false,
+      partnerHandSize: 27
+    });
+    expect(move).toHaveLength(5);
+    const ranks = move?.map((c) => c.rank).sort();
+    expect(ranks).toEqual(['3', '4', '5', '6', '7']);
+  });
+
+  it('领出时手牌有三带二，优先出三带二', () => {
+    const hand = [
+      card('spade', '5'),
+      card('heart', '5'),
+      card('club', '5'),
+      card('spade', '3'),
+      card('heart', '3'),
+      card('diamond', 'K')
+    ];
+    const move = chooseBotPlay({
+      hand,
+      lastPlay: null,
+      level,
+      isLastPlayFromPartner: false,
+      partnerHandSize: 27
+    });
+    expect(move).toHaveLength(5);
+  });
+
+  it('领出时手牌有小对子和散单张，优先打出对子', () => {
+    const hand = [card('spade', '3'), card('heart', '3'), card('diamond', '9')];
+    const move = chooseBotPlay({
+      hand,
+      lastPlay: null,
+      level,
+      isLastPlayFromPartner: false,
+      partnerHandSize: 27
+    });
+    expect(move).toHaveLength(2);
+    expect(move?.[0]?.rank).toBe('3');
   });
 });
 
