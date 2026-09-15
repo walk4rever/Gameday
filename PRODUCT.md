@@ -1,6 +1,6 @@
-# Guandan（掼蛋）
+# Gameday · 掼蛋
 
-家庭联机掼蛋。手机浏览器打开即玩，人数不够由机器人补位，对新手做出牌限制与提示。
+家庭联机游戏平台（首发游戏：掼蛋）。手机浏览器打开即玩，人数不够由机器人补位，对新手做出牌限制与提示。
 
 ---
 
@@ -60,7 +60,7 @@ getLegalPlays(hand: Card[], lastPlay: Play | null, level: Rank): Play[]
 
 ### 3.1 部署
 
-全部 Cloudflare，域名 `gd.air7.fun`。
+全部 Cloudflare，域名 `air7fun.com` / `gameday.air7fun.com`。
 
 **为什么不用 Vercel**：Vercel Functions 无状态、有执行时限，无法持有 WebSocket 长连接，也无法在内存中保存牌局状态；文件系统临时，SQLite 存战绩不可行。
 
@@ -168,6 +168,6 @@ Guandan/
 - [x] P2：`apps/server` 实现 Room Durable Object（一个房间=一个 DO 实例，固定房间名 `default`，1-4 名真人共用，空位机器人补位）+ `packages/protocol`（WS 消息类型）+ `apps/web`（进房间前填昵称，之后就是唯一的游戏界面）。联机身份是设备本地生成的 `playerId`（localStorage），断线的座位由 bot 临时代打，重连会认回原来的座位——这是简化版，正式的昵称+PIN 跨设备账号系统留给 P3（战绩需要它才有意义）。
   - **过程中抓到一个真实的并发 bug**：两个连接几乎同时到达时，Room 各自异步读 `ctx.storage`、各自当作"房间不存在"发一副新牌，后到的把先到的覆盖掉，导致其中一个玩家的手牌和服务端权威状态对不上（"出的牌不在手上"）。用真实的两个 WebSocket 客户端（复用 `chooseBotPlay` 决策）连本地 `wrangler dev` 才复现出来——写单元测试测不出这个，因为它只在两个连接真正并发到达时才触发。修法是 Cloudflare 官方推荐的 `ctx.blockConcurrencyWhile()`：在构造函数里把状态读取包起来，保证任何请求处理之前状态已经就绪，彻底消除竞态而不是走一步)。修完后连续 6 局端到端联机仿真全部正常收尾
   - 验证方式：本地 `wrangler dev` + 两个真实 WebSocket 客户端跑完整局（含手牌隐私检查：两家收到的手牌无交集）。**没有部署到真实 Cloudflare 账号**，也没有在两台真手机上试过——这两步需要你的 Cloudflare 账号和实体设备，我这边做不了
-- [ ] `gd.air7.fun` 的 DNS 当前托管在何处？若已在 Cloudflare，部署成本更低（部署本身还没做）
+- [x] `air7fun.com` DNS 已托管至 Cloudflare，等待 Worker 发布后绑定自定义域
 - [ ] 一局打到 A 结束耗时较长，是否需要"中途存档 / 下次继续"
 - [ ] 是否需要观战模式（一方先出完后看剩余对局）
