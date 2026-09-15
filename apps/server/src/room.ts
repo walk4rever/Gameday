@@ -74,12 +74,74 @@ export class Room extends DurableObject<Env> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    // 房间与桌子状态查询接口 (HTTP GET)
+    if (url.pathname === '/api/room-status') {
+      const room = this.room;
+      const gameActive = room.game !== null && !isRoundOver(room.game);
+      const queryPlayerId = url.searchParams.get('playerId');
+      const isMember = queryPlayerId ? room.seats.some((s) => s.playerId === queryPlayerId) : false;
+      const humanSeatsCount = room.seats.filter((s) => s.playerId !== null).length;
+      // 满员判定：对局进行中（4人锁桌），或者在大厅已坐满4位真人
+      const isFull = gameActive || humanSeatsCount >= 4;
+
+      return Response.json(
+        {
+          room: url.searchParams.get('room') ?? 'default',
+          tables: [
+            {
+              id: 'guandan',
+              name: '经典掼蛋',
+              type: 'guandan',
+              gameActive,
+              isFull,
+              isMember,
+              humanSeatsCount,
+              maxSeats: 4,
+              status: gameActive
+                ? 'playing'
+                : humanSeatsCount >= 4
+                  ? 'full'
+                  : humanSeatsCount > 0
+                    ? 'waiting'
+                    : 'empty',
+              seats: room.seats.map((s, idx) => ({
+                seat: idx,
+                name: s.name,
+                isBot: s.playerId === null,
+                connected:
+                  s.playerId !== null && this.connections.some((c) => c.playerId === s.playerId)
+              }))
+            },
+            {
+              id: 'shuangsheng',
+              name: '经典双升 · 拖拉机',
+              type: 'shuangsheng',
+              gameActive: false,
+              isFull: false,
+              isMember: false,
+              humanSeatsCount: 0,
+              maxSeats: 4,
+              status: 'developing'
+            }
+          ]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'no-store'
+          }
+        }
+      );
+    }
+
     const upgradeHeader = request.headers.get('Upgrade');
     if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
       return new Response('expected websocket', { status: 426 });
     }
 
-    const url = new URL(request.url);
     const playerId = url.searchParams.get('playerId');
     const name = (url.searchParams.get('name') ?? '玩家').slice(0, 12);
     if (!playerId) return new Response('missing playerId', { status: 400 });
@@ -87,7 +149,11 @@ export class Room extends DurableObject<Env> {
     const room = this.room;
     const seat = this.assignSeat(room, playerId, name);
     if (seat === null) {
-      return new Response('房间已满', { status: 409 });
+      const isGameActive = room.game !== null;
+      const msg = isGameActive
+        ? '掼蛋桌游戏已开始且已满员（4人），第5人无法进入'
+        : '掼蛋桌已满员（4人已就绪）';
+      return new Response(msg, { status: 409 });
     }
 
     const pair = new WebSocketPair();
@@ -183,7 +249,12 @@ export class Room extends DurableObject<Env> {
       return seat;
     }
 
-    // 2. 空闲座位 (playerId === null)
+    // 2. 核心限制：如果对局已经启动（room.game !== null），禁止任何新玩家/第5人加入！
+    if (room.game !== null) {
+      return null;
+    }
+
+    // 3. 空闲座位 (playerId === null)
     const emptySeatIndex = room.seats.findIndex((s) => s.playerId === null);
     if (emptySeatIndex !== -1) {
       const seat = emptySeatIndex as Seat;
@@ -192,21 +263,19 @@ export class Room extends DurableObject<Env> {
       return seat;
     }
 
-    // 3. 如果大厅阶段（未开局），有座位处于离线状态（之前进来看过但关了网页的玩家）：
+    // 4. 如果大厅阶段（未开局），有座位处于离线状态（之前进来看过但关了网页的玩家）：
     //    允许新玩家顶替该空闲座位进大厅
-    if (room.game === null) {
-      const offlineSeatIndex = room.seats.findIndex(
-        (s) => !this.connections.some((c) => c.playerId === s.playerId)
-      );
-      if (offlineSeatIndex !== -1) {
-        const seat = offlineSeatIndex as Seat;
-        const finalName = this.disambiguateName(name, seat, room);
-        room.seats[seat] = { playerId, name: finalName };
-        return seat;
-      }
+    const offlineSeatIndex = room.seats.findIndex(
+      (s) => !this.connections.some((c) => c.playerId === s.playerId)
+    );
+    if (offlineSeatIndex !== -1) {
+      const seat = offlineSeatIndex as Seat;
+      const finalName = this.disambiguateName(name, seat, room);
+      room.seats[seat] = { playerId, name: finalName };
+      return seat;
     }
 
-    // 4. 对局已在进行中且 4 人满员，不可顶替
+    // 5. 对局已在进行中或 4 人满员，不可加入
     return null;
   }
 
@@ -227,6 +296,23 @@ export class Room extends DurableObject<Env> {
       return;
     }
     const seat = seatIndex as Seat;
+
+    if (message.type === 'leave') {
+      const conn = this.connections.find((c) => c.playerId === playerId);
+      this.connections = this.connections.filter((c) => c.playerId !== playerId);
+
+      if (room.game === null) {
+        // 大厅阶段离开：重置座位为机器人
+        room.seats[seat] = { playerId: null, name: `机器人 ${seat + 1}` };
+      } else {
+        // 游戏中离开：座位解除真人绑定，转由机器人代打出牌
+        room.seats[seat].playerId = null;
+      }
+
+      await this.afterStateChange(room);
+      conn?.ws.close(1000, 'player_leave');
+      return;
+    }
 
     if (message.type === 'start') {
       if (room.game !== null) {

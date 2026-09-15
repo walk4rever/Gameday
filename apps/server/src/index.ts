@@ -21,7 +21,7 @@ export default {
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
-    if (url.pathname === '/ws') {
+    if (url.pathname === '/ws' || url.pathname === '/api/room-status') {
       const roomName = url.searchParams.get('room') ?? 'default';
       const id = env.ROOM.idFromName(roomName);
       const stub = env.ROOM.get(id);

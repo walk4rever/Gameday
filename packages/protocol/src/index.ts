@@ -9,7 +9,8 @@ export type ClientMessage =
   | { type: 'start' }
   | { type: 'play'; cardIds: string[] }
   | { type: 'pass' }
-  | { type: 'restart' };
+  | { type: 'restart' }
+  | { type: 'leave' };
 
 export interface LobbySeatSnapshot {
   seat: Seat;

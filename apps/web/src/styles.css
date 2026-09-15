@@ -253,10 +253,12 @@ button:active {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 10px 16px;
+  padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -264,6 +266,7 @@ button:active {
   display: flex;
   align-items: baseline;
   gap: 10px;
+  white-space: nowrap;
 }
 
 .lobby-title {
@@ -271,6 +274,7 @@ button:active {
   font-size: 1.3rem;
   font-weight: 800;
   color: #fef08a;
+  white-space: nowrap;
 }
 
 .room-id-tag {
@@ -279,11 +283,14 @@ button:active {
   background: rgba(255, 255, 255, 0.08);
   padding: 2px 8px;
   border-radius: 6px;
+  white-space: nowrap;
 }
 
 .lobby-header-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .icon-btn {
@@ -505,21 +512,24 @@ button:active {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  padding: 7px 12px;
+  padding: 6px 10px;
 }
 
 .top-level-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.95rem;
+  gap: 4px;
+  font-size: 0.92rem;
   font-weight: 800;
   color: #fef08a;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .crown-icon {
@@ -530,20 +540,30 @@ button:active {
   font-size: 0.72rem;
   color: #fca5a5;
   font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .level-wild-hint {
+    display: none;
+  }
 }
 
 .top-bar-controls {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .top-icon-btn {
   background: rgba(255, 255, 255, 0.1);
   color: #f8fafc;
-  padding: 5px 10px;
+  padding: 5px 7px;
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .top-icon-btn.muted {
@@ -1881,5 +1901,462 @@ button:active {
   font-size: 0.72rem;
   margin: 0;
 }
+
+/* ==========================================================================
+   10. 房间多桌列表大厅系统 (Room Tables System: 掼蛋桌 & 双升研发中)
+   ========================================================================== */
+
+.room-tables-page {
+  gap: 12px;
+  overflow-y: auto;
+  max-width: 680px;
+}
+
+.room-tables-header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.room-info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.room-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.room-symbol {
+  font-size: 1.25rem;
+}
+
+.room-main-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fef08a;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.room-tag {
+  font-size: 0.74rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.room-player-welcome {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.player-highlight {
+  color: #38bdf8;
+}
+
+.room-header-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+/* 牌桌卡片容器 */
+.tables-list-container {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+.table-entry-card {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
+}
+
+.table-entry-card:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.table-guandan {
+  background: linear-gradient(145deg, rgba(20, 83, 45, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.table-card-locked {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: linear-gradient(145deg, rgba(69, 10, 10, 0.3) 0%, rgba(15, 23, 42, 0.85) 100%);
+}
+
+.table-shuangsheng {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.table-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.table-title-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.table-emblem {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.table-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.table-name {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #f8fafc;
+  white-space: nowrap;
+}
+
+.table-capacity-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fef08a;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+
+.table-desc {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.table-status-area {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+}
+
+.badge-playing {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+
+.badge-full {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fde047;
+}
+
+.badge-waiting {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+
+.badge-empty {
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+
+.badge-developing {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  color: #c7d2fe;
+}
+
+.badge-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dot-red {
+  background: #ef4444;
+  animation: beacon-ping 1.2s infinite;
+}
+
+.dot-yellow {
+  background: #f59e0b;
+}
+
+.dot-green {
+  background: #10b981;
+}
+
+/* 微缩座位预览 */
+.table-mini-seats-preview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  padding: 6px 8px;
+}
+
+.mini-seat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+  position: relative;
+  min-width: 0;
+}
+
+.mini-seat-item.seat-occupied {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.mini-seat-avatar {
+  font-size: 0.9rem;
+}
+
+.mini-seat-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.mini-seat-dot {
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.developing-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.developing-notice {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+/* 卡片底部操作 */
+.table-card-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.table-action-btn {
+  width: 100%;
+  padding: 11px 0;
+  font-size: 1rem;
+  font-weight: 800;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.locked-warning-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.locked-warning-text {
+  font-size: 0.76rem;
+  color: #fca5a5;
+  line-height: 1.4;
+}
+
+.btn-locked {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: not-allowed;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-developing {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  color: #c7d2fe;
+}
+
+.room-tables-footer {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 4px 0 8px;
+}
+
+.room-rule-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.5;
+}
+
+.room-tables-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #f59e0b;
+  color: #fef08a;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  animation: modal-fade-in 0.2s ease-out;
+}
+
+/* 退出牌桌确认弹窗 */
+.exit-confirm-modal {
+  background: #0f172a;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 380px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+  animation: modal-scale-up 0.2s ease-out;
+}
+
+.exit-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.exit-modal-desc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.exit-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.exit-modal-actions button {
+  flex: 1;
+}
+
+.btn-danger-exit {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+
+/* 横屏下房间桌子大厅双列平铺 */
+.landscape-mode .room-tables-page,
+.app-forced-landscape .room-tables-page {
+  max-width: 900px !important;
+  padding: 6px 14px;
+  gap: 8px;
+}
+
+.landscape-mode .tables-list-container,
+.app-forced-landscape .tables-list-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.landscape-mode .room-tables-header,
+.app-forced-landscape .room-tables-header {
+  padding: 6px 14px;
+  border-radius: 12px;
+}
+
+.landscape-mode .table-entry-card,
+.app-forced-landscape .table-entry-card {
+  padding: 10px 14px;
+  gap: 8px;
+  border-radius: 16px;
+}
+
+.landscape-mode .table-action-btn,
+.app-forced-landscape .table-action-btn {
+  padding: 8px 0;
+  font-size: 0.92rem;
+}
+
 
 

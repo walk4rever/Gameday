@@ -9,9 +9,10 @@ export interface LobbyScreenProps {
   error: string | null;
   onStart: () => void;
   onShowRules?: () => void;
+  onExit?: () => void;
 }
 
-export function LobbyScreen({ you, seats, error, onStart, onShowRules }: LobbyScreenProps) {
+export function LobbyScreen({ you, seats, error, onStart, onShowRules, onExit }: LobbyScreenProps) {
   const { isLandscape, needsForcedRotation, toggleOrientation } = useOrientation();
   const [copied, setCopied] = useState(false);
 
@@ -100,6 +101,11 @@ export function LobbyScreen({ you, seats, error, onStart, onShowRules }: LobbySc
           <button className={`share-btn ${copied ? 'copied' : ''}`} onClick={copyRoomLink}>
             {copied ? '✓ 已复制链接' : '🔗 邀请家人'}
           </button>
+          {onExit && (
+            <button className="icon-btn btn-leave-table" onClick={onExit} title="离开当前牌桌，返回房间大厅">
+              🚪 离开
+            </button>
+          )}
         </div>
       </div>
 

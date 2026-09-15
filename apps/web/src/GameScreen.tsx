@@ -27,6 +27,7 @@ const FAN_LIFT_PX = 24;
 export interface GameScreenProps {
   game: UseGameResult;
   banner?: ReactNode;
+  onExit?: () => void;
 }
 
 /** 动态半扇形排布：牌多时紧凑收拢，牌少时舒展居中，弧度自然；横屏下更平缓，展示更大触控面。 */
@@ -211,7 +212,7 @@ function SeatCard({
   );
 }
 
-export function GameScreen({ game, banner }: GameScreenProps) {
+export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   const {
     level,
     seats,
@@ -230,6 +231,7 @@ export function GameScreen({ game, banner }: GameScreenProps) {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRules, setShowRules] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => sound.isEnabled());
 
   // 滑动多选（滑动触控/拖拽连选）
@@ -411,6 +413,15 @@ export function GameScreen({ game, banner }: GameScreenProps) {
           <button className="top-icon-btn" onClick={game.restart} title="重新发牌开新局">
             🔄 重开
           </button>
+          {onExit && (
+            <button
+              className="top-icon-btn btn-exit"
+              onClick={() => setShowExitConfirm(true)}
+              title="退出当前牌桌，返回房间大厅"
+            >
+              🚪 退出
+            </button>
+          )}
         </div>
       </div>
 
@@ -575,6 +586,37 @@ export function GameScreen({ game, banner }: GameScreenProps) {
           seats={seats}
           onRestart={game.restart}
         />
+      )}
+
+      {/* 退出牌桌确认弹窗 */}
+      {showExitConfirm && (
+        <div className="modal-backdrop" onClick={() => setShowExitConfirm(false)}>
+          <div className="exit-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="exit-modal-title">🚪 确定退出当前牌桌？</h3>
+            <p className="exit-modal-desc">
+              对局正在进行中。退出后将返回房间大厅，您的席位将由 AI 机器人替补代打，其他玩家可继续对战。
+            </p>
+            <div className="exit-modal-actions">
+              <button
+                type="button"
+                className="secondary-action-btn"
+                onClick={() => setShowExitConfirm(false)}
+              >
+                继续打牌
+              </button>
+              <button
+                type="button"
+                className="primary-action-btn btn-danger-exit"
+                onClick={() => {
+                  setShowExitConfirm(false);
+                  onExit?.();
+                }}
+              >
+                确认退出
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

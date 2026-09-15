@@ -17,6 +17,7 @@ export type OnlinePhase =
 export interface UseOnlineGameResult {
   status: ConnectionStatus;
   view: OnlinePhase;
+  leave: () => void;
 }
 
 export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameResult {
@@ -25,13 +26,15 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
   const [message, setMessage] = useState<NonErrorMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const userLeftRef = useRef(false);
 
   useEffect(() => {
     let unmounted = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    userLeftRef.current = false;
 
     function connect() {
-      if (unmounted) return;
+      if (unmounted || userLeftRef.current) return;
       const url = new URL(serverUrl);
       url.searchParams.set('playerId', playerId);
       url.searchParams.set('name', name);
@@ -45,10 +48,12 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
         setStatus('open');
       });
 
-      ws.addEventListener('close', () => {
+      ws.addEventListener('close', (e) => {
         if (unmounted) return;
         setStatus('closed');
-        // 自动重连：1.5 秒后再次尝试，确保网络恢复或切换时自动上线
+        // 如果用户已主动退出或正常结束，不自动重连
+        if (userLeftRef.current || e.code === 1000) return;
+        // 自动重连：1.5 秒后再次尝试
         reconnectTimer = setTimeout(() => {
           connect();
         }, 1500);
@@ -95,6 +100,18 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
 
   const start = useCallback(() => send({ type: 'start' }), [send]);
 
+  const leave = useCallback(() => {
+    userLeftRef.current = true;
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'leave' }));
+    }
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'voluntary_leave');
+      wsRef.current = null;
+    }
+    setStatus('closed');
+  }, []);
+
   const game = useMemo<UseGameResult | null>(() => {
     if (!message || message.type !== 'state') return null;
     const state: StateMessage = message;
@@ -133,5 +150,5 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
     return { phase: 'connecting' };
   }, [game, message, start, error]);
 
-  return { status, view };
+  return { status, view, leave };
 }

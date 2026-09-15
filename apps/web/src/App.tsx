@@ -2,10 +2,14 @@ import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { GameScreen } from './GameScreen.js';
 import { LobbyScreen } from './LobbyScreen.js';
+import { RoomTablesScreen } from './RoomTablesScreen.js';
 import { RulesModal } from './RulesModal.js';
 import { useOnlineGame } from './game/useOnlineGame.js';
 
-type Mode = { kind: 'join' } | { kind: 'online'; name: string };
+type Mode =
+  | { kind: 'join' }
+  | { kind: 'tables'; name: string; room: string }
+  | { kind: 'online'; name: string; room: string; tableId: string };
 
 const NAME_STORAGE_KEY = 'guandan:playerName';
 
@@ -20,33 +24,62 @@ const FUN_NAMES = [
   '机智搭档'
 ];
 
-function defaultWsUrl(): string {
+function defaultWsUrl(roomName?: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const room = new URLSearchParams(window.location.search).get('room');
+  const room = roomName ?? new URLSearchParams(window.location.search).get('room') ?? 'default';
   const url = new URL(`${protocol}//${window.location.host}/ws`);
-  if (room) url.searchParams.set('room', room);
+  url.searchParams.set('room', room);
   return url.toString();
 }
 
-function getServerUrl(): string {
-  return import.meta.env.VITE_WS_URL ?? defaultWsUrl();
+function getServerUrl(roomName?: string): string {
+  if (import.meta.env.VITE_WS_URL) {
+    const url = new URL(import.meta.env.VITE_WS_URL);
+    if (roomName) url.searchParams.set('room', roomName);
+    return url.toString();
+  }
+  return defaultWsUrl(roomName);
 }
 
 export function App() {
-  const [mode, setMode] = useState<Mode>({ kind: 'join' });
+  const [mode, setMode] = useState<Mode>(() => {
+    const savedName = localStorage.getItem(NAME_STORAGE_KEY);
+    const roomParam = new URLSearchParams(window.location.search).get('room') ?? 'default';
+    if (savedName && savedName.trim()) {
+      return { kind: 'tables', name: savedName.trim(), room: roomParam };
+    }
+    return { kind: 'join' };
+  });
+
   const [showGlobalRules, setShowGlobalRules] = useState(false);
 
   return (
     <>
-      {mode.kind === 'join' ? (
+      {mode.kind === 'join' && (
         <JoinScreen
-          onJoin={(name) => setMode({ kind: 'online', name })}
+          onJoin={(name, room) => setMode({ kind: 'tables', name, room })}
           onShowRules={() => setShowGlobalRules(true)}
         />
-      ) : (
+      )}
+
+      {mode.kind === 'tables' && (
+        <RoomTablesScreen
+          room={mode.room}
+          playerName={mode.name}
+          onSelectTable={(tableId) =>
+            setMode({ kind: 'online', name: mode.name, room: mode.room, tableId })
+          }
+          onShowRules={() => setShowGlobalRules(true)}
+          onChangeNameOrRoom={() => setMode({ kind: 'join' })}
+        />
+      )}
+
+      {mode.kind === 'online' && (
         <OnlineGame
           name={mode.name}
-          onExit={() => setMode({ kind: 'join' })}
+          room={mode.room}
+          tableId={mode.tableId}
+          onExit={() => setMode({ kind: 'tables', name: mode.name, room: mode.room })}
           onShowRules={() => setShowGlobalRules(true)}
         />
       )}
@@ -60,7 +93,7 @@ function JoinScreen({
   onJoin,
   onShowRules
 }: {
-  onJoin: (name: string) => void;
+  onJoin: (name: string, room: string) => void;
   onShowRules: () => void;
 }) {
   const [name, setName] = useState(() => localStorage.getItem(NAME_STORAGE_KEY) ?? '');
@@ -78,12 +111,11 @@ function JoinScreen({
     const trimmed = name.trim() || '玩家';
     localStorage.setItem(NAME_STORAGE_KEY, trimmed);
 
-    // 如果修改了房间号，更新 URL 中的 ?room=
+    const targetRoom = roomParam.trim() || 'default';
     const currentRoom = new URLSearchParams(window.location.search).get('room') ?? '';
-    const targetRoom = roomParam.trim();
     if (targetRoom !== currentRoom) {
       const url = new URL(window.location.href);
-      if (targetRoom) {
+      if (targetRoom !== 'default') {
         url.searchParams.set('room', targetRoom);
       } else {
         url.searchParams.delete('room');
@@ -91,7 +123,7 @@ function JoinScreen({
       window.history.replaceState({}, '', url.toString());
     }
 
-    onJoin(trimmed);
+    onJoin(trimmed, targetRoom);
   }
 
   return (
@@ -135,13 +167,13 @@ function JoinScreen({
             <input
               value={roomParam}
               onChange={(e) => setRoomParam(e.target.value)}
-              placeholder="留空为默认公共房间"
+              placeholder="留空为默认房间 default"
               maxLength={16}
             />
           </div>
 
           <button type="submit" className="primary-action-btn pulse-glow join-btn">
-            🚪 进入牌桌
+            🚪 进入房间
           </button>
         </form>
 
@@ -157,14 +189,24 @@ function JoinScreen({
 
 function OnlineGame({
   name,
+  room,
+  tableId: _tableId,
   onExit,
   onShowRules
 }: {
   name: string;
+  room: string;
+  tableId: string;
   onExit: () => void;
   onShowRules: () => void;
 }) {
-  const { status, view } = useOnlineGame(getServerUrl(), name);
+  const wsUrl = getServerUrl(room);
+  const { status, view, leave } = useOnlineGame(wsUrl, name);
+
+  const handleExit = () => {
+    leave();
+    onExit();
+  };
 
   if (view.phase === 'connecting') {
     return (
@@ -172,10 +214,12 @@ function OnlineGame({
         <div className="connecting-card">
           <div className="loading-spinner" />
           <p className="connecting-text">
-            {status === 'closed' ? '连接已断开，正在尝试重连…' : '正在连接专属牌桌…'}
+            {status === 'closed'
+              ? '连接已断开，或本桌对局已满员（4人锁定）无法加入…'
+              : '正在连接 1号桌·经典掼蛋…'}
           </p>
-          <button className="secondary-action-btn" onClick={onExit}>
-            ← 返回大厅更换昵称
+          <button className="secondary-action-btn" onClick={handleExit}>
+            ← 返回桌子列表
           </button>
         </div>
       </div>
@@ -190,6 +234,7 @@ function OnlineGame({
         error={view.error}
         onStart={view.start}
         onShowRules={onShowRules}
+        onExit={handleExit}
       />
     );
   }
@@ -197,6 +242,7 @@ function OnlineGame({
   return (
     <GameScreen
       game={view.game}
+      onExit={handleExit}
       banner={
         status === 'open' ? undefined : (
           <div className="online-reconnecting-banner">
