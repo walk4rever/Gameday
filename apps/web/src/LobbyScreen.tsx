@@ -1,6 +1,7 @@
 import type { Seat } from '@guandan/engine';
 import type { LobbySeatSnapshot } from '@guandan/protocol';
 import { useState } from 'react';
+import { useOrientation } from './useOrientation.js';
 
 export interface LobbyScreenProps {
   you: Seat;
@@ -11,6 +12,7 @@ export interface LobbyScreenProps {
 }
 
 export function LobbyScreen({ you, seats, error, onStart, onShowRules }: LobbyScreenProps) {
+  const { isLandscape, needsForcedRotation, toggleOrientation } = useOrientation();
   const [copied, setCopied] = useState(false);
 
   const topSeat = ((you + 2) % 4) as Seat;
@@ -71,7 +73,11 @@ export function LobbyScreen({ you, seats, error, onStart, onShowRules }: LobbySc
   };
 
   return (
-    <div className="app lobby-page">
+    <div
+      className={`app lobby-page ${isLandscape ? 'landscape-mode' : ''} ${
+        needsForcedRotation ? 'app-forced-landscape' : ''
+      }`}
+    >
       {/* 顶部房间信息与快速操作 */}
       <div className="lobby-header">
         <div className="lobby-title-wrap">
@@ -79,6 +85,13 @@ export function LobbyScreen({ you, seats, error, onStart, onShowRules }: LobbySc
           <span className="room-id-tag">房号: {roomName}</span>
         </div>
         <div className="lobby-header-actions">
+          <button
+            className="icon-btn orientation-toggle-btn"
+            onClick={toggleOrientation}
+            title={isLandscape ? '切换为竖屏' : '切换为横屏'}
+          >
+            {isLandscape ? '📱 竖屏' : '📱 横屏'}
+          </button>
           {onShowRules && (
             <button className="icon-btn" onClick={onShowRules} title="掼蛋玩法速查">
               📖 规则

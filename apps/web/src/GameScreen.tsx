@@ -19,6 +19,7 @@ import { PlayingCard, SuitIcon } from './PlayingCard.js';
 import { RoundOverModal } from './RoundOverModal.js';
 import { RulesModal } from './RulesModal.js';
 import { sound } from './sound.js';
+import { useOrientation } from './useOrientation.js';
 
 const FAN_CARD_WIDTH_PX = 66;
 const FAN_LIFT_PX = 24;
@@ -28,30 +29,49 @@ export interface GameScreenProps {
   banner?: ReactNode;
 }
 
-/** 动态半扇形排布：牌多时紧凑收拢，牌少时舒展居中，弧度自然。 */
-function calculateFanStyle(index: number, total: number, selected: boolean): CSSProperties {
+/** 动态半扇形排布：牌多时紧凑收拢，牌少时舒展居中，弧度自然；横屏下更平缓，展示更大触控面。 */
+function calculateFanStyle(
+  index: number,
+  total: number,
+  selected: boolean,
+  isLandscape: boolean
+): CSSProperties {
+  const cardWidth = isLandscape ? 60 : FAN_CARD_WIDTH_PX;
+  const liftPx = isLandscape ? 20 : FAN_LIFT_PX;
+
   if (total <= 1) {
     return {
       left: '50%',
-      transform: `translateX(-50%) translateY(${selected ? -FAN_LIFT_PX : 0}px)`,
+      transform: `translateX(-50%) translateY(${selected ? -liftPx : 0}px)`,
       zIndex: selected ? 200 : 10
     };
   }
 
-  // 牌数多时控制在 36 度以内，牌数少时 12~24 度，手感更沉稳
-  const maxSpreadDeg = total > 16 ? 38 : total > 8 ? 28 : 16;
+  // 牌数多时控制弧度；横屏下弧度更平缓，手感更开阔
+  const maxSpreadDeg = isLandscape
+    ? total > 16
+      ? 22
+      : total > 8
+        ? 15
+        : 10
+    : total > 16
+      ? 38
+      : total > 8
+        ? 28
+        : 16;
   const steps = total - 1;
   const anglePerCard = maxSpreadDeg / steps;
   const angle = (index - steps / 2) * anglePerCard;
 
-  // 手机端自适应边距与跨度
-  const edgeInsetPx = 16;
-  const span = `(100% - ${FAN_CARD_WIDTH_PX}px - ${2 * edgeInsetPx}px)`;
+  // 边距与卡牌跨度自适应
+  const edgeInsetPx = isLandscape ? 28 : 16;
+  const span = `(100% - ${cardWidth}px - ${2 * edgeInsetPx}px)`;
   const leftCalc = `calc(${edgeInsetPx}px + ${index} * ${span} / ${steps})`;
 
-  const lift = selected ? FAN_LIFT_PX : 0;
-  // 边缘的牌稍往下落，中间微拱起，形成优美的弧面
-  const archOffset = Math.sin((index / steps) * Math.PI) * 8;
+  const lift = selected ? liftPx : 0;
+  // 边缘的牌稍往下落，中间微拱起
+  const archFactor = isLandscape ? 4 : 8;
+  const archOffset = Math.sin((index / steps) * Math.PI) * archFactor;
 
   return {
     left: leftCalc,
@@ -206,6 +226,8 @@ export function GameScreen({ game, banner }: GameScreenProps) {
     lastPlay
   } = game;
 
+  const { isLandscape, needsForcedRotation, toggleOrientation } = useOrientation();
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRules, setShowRules] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => sound.isEnabled());
@@ -214,12 +236,13 @@ export function GameScreen({ game, banner }: GameScreenProps) {
   const [isDragging, setIsDragging] = useState(false);
   const dragVisitedIdsRef = useRef<Set<string>>(new Set());
 
-  // 音效触发监控
+  // 音效与触感监控
   const prevTurnRef = useRef(currentTurn);
   useEffect(() => {
     if (prevTurnRef.current !== currentTurn) {
       if (isHumanTurn && !roundOver) {
         sound.yourTurn();
+        sound.haptic('medium');
       }
       prevTurnRef.current = currentTurn;
     }
@@ -229,6 +252,7 @@ export function GameScreen({ game, banner }: GameScreenProps) {
   useEffect(() => {
     if (!prevRoundOverRef.current && roundOver) {
       sound.victory();
+      sound.haptic('success');
     }
     prevRoundOverRef.current = roundOver;
   }, [roundOver]);
@@ -271,12 +295,11 @@ export function GameScreen({ game, banner }: GameScreenProps) {
       if (next.has(cardId)) {
         next.delete(cardId);
         sound.cardDeselect();
+        sound.haptic('light');
       } else {
         next.add(cardId);
         sound.cardSelect();
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          navigator.vibrate?.(8);
-        }
+        sound.haptic('selection');
       }
       return next;
     });
@@ -310,8 +333,10 @@ export function GameScreen({ game, banner }: GameScreenProps) {
     if (!selectionAnalysis.valid || selectedCards.length === 0) return;
     if (selectionAnalysis.play?.type === 'bomb' || selectionAnalysis.play?.type === 'fourJokers') {
       sound.bomb();
+      sound.haptic('heavy');
     } else {
       sound.cardPlay();
+      sound.haptic('medium');
     }
     game.playSelected(selectedCards);
     setSelectedIds(new Set());
@@ -320,6 +345,7 @@ export function GameScreen({ game, banner }: GameScreenProps) {
   const handlePass = () => {
     if (!canPass) return;
     sound.pass();
+    sound.haptic('light');
     game.pass();
     setSelectedIds(new Set());
   };
@@ -328,12 +354,14 @@ export function GameScreen({ game, banner }: GameScreenProps) {
     if (!hint) return;
     setSelectedIds(hintIds);
     sound.cardSelect();
+    sound.haptic('selection');
     game.clearError();
   };
 
   const handleClearSelection = () => {
     setSelectedIds(new Set());
     sound.cardDeselect();
+    sound.haptic('light');
   };
 
   const toggleSound = () => {
@@ -345,7 +373,9 @@ export function GameScreen({ game, banner }: GameScreenProps) {
 
   return (
     <div
-      className="app game-screen-container"
+      className={`app game-screen-container ${isLandscape ? 'landscape-mode' : ''} ${
+        needsForcedRotation ? 'app-forced-landscape' : ''
+      }`}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onPointerMove={handlePointerMove}
@@ -361,6 +391,13 @@ export function GameScreen({ game, banner }: GameScreenProps) {
         </div>
 
         <div className="top-bar-controls">
+          <button
+            className="top-icon-btn orientation-toggle-btn"
+            onClick={toggleOrientation}
+            title={isLandscape ? '切换为竖屏' : '切换为横屏（宽屏视野，防止误触）'}
+          >
+            {isLandscape ? '📱 竖屏' : '📱 横屏'}
+          </button>
           <button
             className={`top-icon-btn ${soundEnabled ? 'active' : 'muted'}`}
             onClick={toggleSound}
@@ -489,7 +526,7 @@ export function GameScreen({ game, banner }: GameScreenProps) {
                 hinted={hinted}
                 disabled={!isHumanTurn || roundOver}
                 onPointerDown={() => handlePointerDown(card.id)}
-                style={calculateFanStyle(index, hand.length, selected)}
+                style={calculateFanStyle(index, hand.length, selected, isLandscape)}
               />
             );
           })}

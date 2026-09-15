@@ -218,6 +218,36 @@ class SoundManager {
       osc.stop(start + 0.45);
     });
   }
+
+  /** 移动端触感反馈（轻/中/重/成功） */
+  public haptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' = 'light'): void {
+    triggerHaptic(type);
+  }
+}
+
+/** 移动端触感反馈独立工具函数 */
+export function triggerHaptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' = 'light'): void {
+  if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return;
+  try {
+    switch (type) {
+      case 'selection':
+      case 'light':
+        navigator.vibrate(8);
+        break;
+      case 'medium':
+        navigator.vibrate(16);
+        break;
+      case 'heavy':
+        navigator.vibrate([25, 35, 25]);
+        break;
+      case 'success':
+        navigator.vibrate([15, 60, 25]);
+        break;
+    }
+  } catch {
+    // ignore
+  }
 }
 
 export const sound = new SoundManager();
+
