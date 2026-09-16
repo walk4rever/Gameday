@@ -247,4 +247,44 @@ describe('getRankedHintPlays：智能提示推荐与循环轮换', () => {
     // 逢人配作为单张应当排在最后
     expect(hints[hints.length - 1]?.cards[0]?.suit).toBe('heart');
   });
+
+  it('支持 maxSuggestions 限制至多返回 Top 3~5 种最佳实践推荐', () => {
+    const hand = [
+      card('spade', '3'),
+      card('heart', '4'),
+      card('club', '5'),
+      card('diamond', '6'),
+      card('spade', '7'),
+      card('heart', '8'),
+      card('club', '8'),
+      card('spade', '9'),
+      card('heart', 'J'),
+      card('club', 'Q'),
+      card('diamond', 'K')
+    ];
+    // 不传参数时有很多候选
+    const allHints = getRankedHintPlays({
+      hand,
+      lastPlay: null,
+      level,
+      isLastPlayFromPartner: false,
+      partnerHandSize: 27
+    });
+    expect(allHints.length).toBeGreaterThan(5);
+
+    // 传入 maxSuggestions = 4 时至多只返回 4 个最优解
+    const topHints = getRankedHintPlays(
+      {
+        hand,
+        lastPlay: null,
+        level,
+        isLastPlayFromPartner: false,
+        partnerHandSize: 27
+      },
+      4
+    );
+    expect(topHints.length).toBe(4);
+    // 第一推荐必须和全量中的第一推荐一致（最优解）
+    expect(topHints[0]?.type).toBe(allHints[0]?.type);
+  });
 });

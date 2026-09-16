@@ -50,9 +50,9 @@ function isSplittingBomb(play: Play, rankCounts: Map<Rank, number>): boolean {
 /**
  * 智能提示推荐引擎：
  * 对当前所有合法出牌方案进行启发式综合评分，返回去重且按推荐优先级降序（评分由优到劣）排列的 Play[]。
- * 前端可基于此列表实现点击【提示】多方案平滑循环轮换（Cycle Hints）。
+ * 遵循纸牌最佳实践，至多保留 Top 3~5 种推荐解（默认至多 4 种），避免向玩家展示大量劣质/杂乱拆牌候选。
  */
-export function getRankedHintPlays(context: BotContext): Play[] {
+export function getRankedHintPlays(context: BotContext, maxSuggestions?: number): Play[] {
   const { hand, lastPlay, level } = context;
   const options = getLegalPlays(hand, lastPlay, level);
   if (options.length === 0) return [];
@@ -75,7 +75,7 @@ export function getRankedHintPlays(context: BotContext): Play[] {
   // 升序排列：得分越低越优秀
   scored.sort((a, b) => a.score - b.score);
 
-  // 去重：同牌型、相同手牌点数组合的等价解保留最优代表（避免循环提示多次出现重复牌面）
+  // 去重：同牌型、相同手牌点数组合的等价解保留最优代表
   const seen = new Set<string>();
   const results: Play[] = [];
 
@@ -87,6 +87,9 @@ export function getRankedHintPlays(context: BotContext): Play[] {
     if (!seen.has(key)) {
       seen.add(key);
       results.push(p);
+      if (maxSuggestions !== undefined && results.length >= maxSuggestions) {
+        break;
+      }
     }
   }
 
@@ -102,7 +105,8 @@ export function chooseBotPlay(context: BotContext): Card[] | null {
     return null;
   }
 
-  const ranked = getRankedHintPlays(context);
+  // 机器人内部决策需充分评估全量候选
+  const ranked = getRankedHintPlays(context, 30);
   if (ranked.length === 0) return null;
 
   const rankCounts = getHandRankCounts(hand);

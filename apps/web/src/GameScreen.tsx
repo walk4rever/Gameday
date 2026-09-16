@@ -441,13 +441,16 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   // 启发式智能提示推荐列表（按综合战术价值由优至劣排序，去重保护炸弹）
   const hintOptions: Play[] = useMemo(() => {
     if (!isHumanTurn || roundOver) return [];
-    return getRankedHintPlays({
-      hand: game.hand,
-      lastPlay: opponentLastPlay,
-      level,
-      isLastPlayFromPartner,
-      partnerHandSize
-    });
+    return getRankedHintPlays(
+      {
+        hand: game.hand,
+        lastPlay: opponentLastPlay,
+        level,
+        isLastPlayFromPartner,
+        partnerHandSize
+      },
+      4
+    );
   }, [isHumanTurn, roundOver, game.hand, opponentLastPlay, level, isLastPlayFromPartner, partnerHandSize]);
 
   const [hintIndex, setHintIndex] = useState(0);
