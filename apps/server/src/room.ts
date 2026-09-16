@@ -350,15 +350,7 @@ export class Room extends DurableObject<Env> {
         }
 
         let list = (await this.ctx.storage.get<RegisteredRoomMeta[]>('rooms_index')) ?? [];
-        if (!list.some((r) => r.roomId === 'default')) {
-          list.push({
-            roomId: 'default',
-            name: '公共大厅',
-            hasPassword: false,
-            createdAt: 0,
-            createdBy: '系统'
-          });
-        }
+        list = list.filter((r) => r.roomId !== 'default');
 
         // 剔除相同 roomId
         list = list.filter((r) => r.roomId !== roomId);
@@ -384,15 +376,7 @@ export class Room extends DurableObject<Env> {
     if (url.pathname === '/api/room/search' && request.method === 'GET') {
       const q = (url.searchParams.get('q') ?? url.searchParams.get('query') ?? '').trim().toLowerCase();
       let list = (await this.ctx.storage.get<RegisteredRoomMeta[]>('rooms_index')) ?? [];
-      if (!list.some((r) => r.roomId === 'default')) {
-        list.push({
-          roomId: 'default',
-          name: '公共大厅',
-          hasPassword: false,
-          createdAt: 0,
-          createdBy: '系统'
-        });
-      }
+      list = list.filter((r) => r.roomId !== 'default');
 
       if (!q) {
         return Response.json(
@@ -430,30 +414,8 @@ export class Room extends DurableObject<Env> {
       }
 
       const q = input.toLowerCase();
-      if (q === 'default' || input === '公共大厅' || input === '大厅') {
-        return Response.json(
-          {
-            ok: true,
-            room: {
-              roomId: 'default',
-              name: '公共大厅',
-              hasPassword: false
-            }
-          },
-          { headers: jsonHeaders }
-        );
-      }
-
       let list = (await this.ctx.storage.get<RegisteredRoomMeta[]>('rooms_index')) ?? [];
-      if (!list.some((r) => r.roomId === 'default')) {
-        list.push({
-          roomId: 'default',
-          name: '公共大厅',
-          hasPassword: false,
-          createdAt: 0,
-          createdBy: '系统'
-        });
-      }
+      list = list.filter((r) => r.roomId !== 'default');
       if (!list.some((r) => r.roomId === 'fam-zrn9q3')) {
         list.push({
           roomId: 'fam-zrn9q3',

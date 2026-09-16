@@ -54,7 +54,9 @@ export function getFavoriteRooms(): FavoriteRoom[] {
     if (!raw) return [];
     const list = JSON.parse(raw) as FavoriteRoom[];
     if (Array.isArray(list)) {
-      return list.sort((a, b) => b.lastVisitedAt - a.lastVisitedAt);
+      return list
+        .filter((r) => r.roomId && r.roomId !== 'default')
+        .sort((a, b) => b.lastVisitedAt - a.lastVisitedAt);
     }
     return [];
   } catch {
@@ -70,11 +72,12 @@ export function recordVisitedRoom(room: {
   name: string;
   hasPassword: boolean;
 }): void {
+  if (!room.roomId || room.roomId === 'default') return;
   try {
     const rooms = getFavoriteRooms().filter((r) => r.roomId !== room.roomId);
     rooms.unshift({
       roomId: room.roomId,
-      name: room.name || (room.roomId === 'default' ? '公共大厅' : '家庭游戏室'),
+      name: room.name || '家庭游戏室',
       hasPassword: Boolean(room.hasPassword),
       lastVisitedAt: Date.now()
     });

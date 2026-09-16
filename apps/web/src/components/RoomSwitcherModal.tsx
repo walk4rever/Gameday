@@ -36,17 +36,7 @@ export function RoomSwitcherModal({
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const list = getFavoriteRooms();
-    // 确保列表包含公共大厅
-    if (!list.some((r) => r.roomId === 'default')) {
-      list.push({
-        roomId: 'default',
-        name: '公共大厅',
-        hasPassword: false,
-        lastVisitedAt: 0
-      });
-    }
-    setHistory(list);
+    setHistory(getFavoriteRooms());
   }, []);
 
   // 监听输入，实时防抖模糊搜索房间名

@@ -111,7 +111,7 @@ export function RoomPasswordModal({
               onClick={onCancel}
               disabled={loading}
             >
-              返回公共大厅
+              ← 返回选择房间
             </button>
             <button
               type="submit"
