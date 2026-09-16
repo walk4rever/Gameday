@@ -15,7 +15,7 @@ import {
   sortHand
 } from './cardDisplay.js';
 import type { SeatView, UseGameResult } from './game/types.js';
-import { PlayingCard, SuitIcon } from './PlayingCard.js';
+import { BigJokerCrown, PlayingCard, SmallJokerMask, SuitIcon } from './PlayingCard.js';
 import { RoundOverModal } from './RoundOverModal.js';
 import { RulesModal } from './RulesModal.js';
 import { sound } from './sound.js';
@@ -155,11 +155,16 @@ function TableMiniCard({ card }: { card: Card }) {
   const red = isRed(card);
   const joker = isJoker(card);
   return (
-    <div className={`table-mini-card ${red ? 'card-red' : 'card-black'}`}>
+    <div className={`table-mini-card ${red ? 'card-red' : 'card-black'} ${joker ? (card.rank === 'big_joker' ? 'mini-card-big-joker' : 'mini-card-small-joker') : ''}`}>
       {joker ? (
         <div className="mini-joker-col">
-          <span>{card.rank === 'big_joker' ? '大' : '小'}</span>
-          <span>王</span>
+          {card.rank === 'big_joker' ? (
+            <BigJokerCrown className="mini-joker-svg" />
+          ) : (
+            <SmallJokerMask className="mini-joker-svg" />
+          )}
+          <span className="mini-joker-text">{card.rank === 'big_joker' ? '大' : '小'}</span>
+          <span className="mini-joker-text">王</span>
         </div>
       ) : (
         <>
