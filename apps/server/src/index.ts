@@ -70,6 +70,22 @@ export default {
             })
           })
         );
+        if (initRes.ok) {
+          const registryStub = env.ROOM.get(env.ROOM.idFromName('__system_room_registry__'));
+          await registryStub.fetch(
+            new Request('https://internal/api/room/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                roomId,
+                name: (body.name || '温馨家庭房').trim().slice(0, 16),
+                hasPassword: Boolean(body.password),
+                createdAt: Date.now(),
+                createdBy: (body.createdBy || '房主').trim()
+              })
+            })
+          );
+        }
         return initRes;
       } catch {
         return Response.json(
@@ -83,6 +99,17 @@ export default {
           }
         );
       }
+    }
+
+    // 全局房间搜索与根据房间名字解析进入
+    if (
+      url.pathname === '/api/room/search' ||
+      url.pathname === '/api/room/resolve' ||
+      url.pathname === '/api/room/register'
+    ) {
+      const id = env.ROOM.idFromName('__system_room_registry__');
+      const stub = env.ROOM.get(id);
+      return stub.fetch(request);
     }
 
     // 房间元数据查询与 6 位密码校验
@@ -105,7 +132,15 @@ export default {
         )
       );
       const data1 = res1.ok
-        ? ((await res1.json()) as { table: unknown; meta?: { name?: string; hasPassword?: boolean } })
+        ? ((await res1.json()) as {
+            table: unknown;
+            meta?: {
+              name?: string;
+              hasPassword?: boolean;
+              createdAt?: number;
+              createdBy?: string;
+            };
+          })
         : null;
 
       const fallbackSeats = [0, 1, 2, 3].map((i) => ({
@@ -149,6 +184,22 @@ export default {
       };
 
       const meta = data1?.meta;
+      if (meta?.name && roomName !== 'default') {
+        const registryStub = env.ROOM.get(env.ROOM.idFromName('__system_room_registry__'));
+        void registryStub.fetch(
+          new Request('https://internal/api/room/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roomId: roomName,
+              name: meta.name,
+              hasPassword: Boolean(meta.hasPassword),
+              createdAt: meta.createdAt ?? Date.now(),
+              createdBy: meta.createdBy ?? '系统'
+            })
+          })
+        );
+      }
 
       return Response.json(
         {

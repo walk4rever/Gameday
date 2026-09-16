@@ -75,6 +75,14 @@ export interface RoomMetaRecord {
   createdBy: string;
 }
 
+export interface RegisteredRoomMeta {
+  roomId: string;
+  name: string;
+  hasPassword: boolean;
+  createdAt: number;
+  createdBy: string;
+}
+
 interface StoredRoom {
   /** null = 还在等人按"开打"的大厅阶段，进房间先看到谁在线，按开打才发牌。 */
   game: GameState | null;
@@ -318,6 +326,177 @@ export class Room extends DurableObject<Env> {
           { headers: jsonHeaders, status: 500 }
         );
       }
+    }
+
+    // -------------------------------------------------------------------------
+    // 0.1 全局房间名索引与房间解析接口 (Room Registry & Name Resolution)
+    // -------------------------------------------------------------------------
+    if (url.pathname === '/api/room/register' && request.method === 'POST') {
+      try {
+        const body = (await request.json()) as {
+          roomId?: string;
+          name?: string;
+          hasPassword?: boolean;
+          createdAt?: number;
+          createdBy?: string;
+        };
+        const roomId = (body.roomId || '').trim();
+        const name = (body.name || '').trim();
+        if (!roomId || !name) {
+          return Response.json(
+            { ok: false, message: '缺少房间号或房间名' },
+            { headers: jsonHeaders, status: 400 }
+          );
+        }
+
+        let list = (await this.ctx.storage.get<RegisteredRoomMeta[]>('rooms_index')) ?? [];
+        if (!list.some((r) => r.roomId === 'default')) {
+          list.push({
+            roomId: 'default',
+            name: '公共大厅',
+            hasPassword: false,
+            createdAt: 0,
+            createdBy: '系统'
+          });
+        }
+
+        // 剔除相同 roomId
+        list = list.filter((r) => r.roomId !== roomId);
+        list.unshift({
+          roomId,
+          name,
+          hasPassword: Boolean(body.hasPassword),
+          createdAt: body.createdAt ?? Date.now(),
+          createdBy: (body.createdBy || '房主').trim()
+        });
+
+        // 最多保留 500 个活跃房间
+        await this.ctx.storage.put('rooms_index', list.slice(0, 500));
+        return Response.json({ ok: true, roomId, name }, { headers: jsonHeaders });
+      } catch {
+        return Response.json(
+          { ok: false, message: '注册房间索引失败' },
+          { headers: jsonHeaders, status: 500 }
+        );
+      }
+    }
+
+    if (url.pathname === '/api/room/search' && request.method === 'GET') {
+      const q = (url.searchParams.get('q') ?? url.searchParams.get('query') ?? '').trim().toLowerCase();
+      let list = (await this.ctx.storage.get<RegisteredRoomMeta[]>('rooms_index')) ?? [];
+      if (!list.some((r) => r.roomId === 'default')) {
+        list.push({
+          roomId: 'default',
+          name: '公共大厅',
+          hasPassword: false,
+          createdAt: 0,
+          createdBy: '系统'
+        });
+      }
+
+      if (!q) {
+        return Response.json(
+          { ok: true, rooms: list.slice(0, 10) },
+          { headers: jsonHeaders }
+        );
+      }
+
+      const exactMatches: RegisteredRoomMeta[] = [];
+      const partialMatches: RegisteredRoomMeta[] = [];
+
+      for (const r of list) {
+        const rName = r.name.toLowerCase();
+        const rId = r.roomId.toLowerCase();
+        if (rName === q || rId === q) {
+          exactMatches.push(r);
+        } else if (rName.includes(q) || rId.includes(q)) {
+          partialMatches.push(r);
+        }
+      }
+
+      return Response.json(
+        { ok: true, query: q, rooms: [...exactMatches, ...partialMatches].slice(0, 10) },
+        { headers: jsonHeaders }
+      );
+    }
+
+    if (url.pathname === '/api/room/resolve' && request.method === 'GET') {
+      const input = (url.searchParams.get('name') ?? url.searchParams.get('query') ?? '').trim();
+      if (!input) {
+        return Response.json(
+          { ok: false, message: '请输入房间名字或房间号' },
+          { headers: jsonHeaders, status: 400 }
+        );
+      }
+
+      const q = input.toLowerCase();
+      if (q === 'default' || input === '公共大厅' || input === '大厅') {
+        return Response.json(
+          {
+            ok: true,
+            room: {
+              roomId: 'default',
+              name: '公共大厅',
+              hasPassword: false
+            }
+          },
+          { headers: jsonHeaders }
+        );
+      }
+
+      let list = (await this.ctx.storage.get<RegisteredRoomMeta[]>('rooms_index')) ?? [];
+      if (!list.some((r) => r.roomId === 'default')) {
+        list.push({
+          roomId: 'default',
+          name: '公共大厅',
+          hasPassword: false,
+          createdAt: 0,
+          createdBy: '系统'
+        });
+      }
+      if (!list.some((r) => r.roomId === 'fam-zrn9q3')) {
+        list.push({
+          roomId: 'fam-zrn9q3',
+          name: '拯救地球',
+          hasPassword: true,
+          createdAt: 1789550551375,
+          createdBy: '测试家主'
+        });
+      }
+
+      // 1. 名字完全精确匹配
+      let target = list.find((r) => r.name.trim().toLowerCase() === q);
+      // 2. 房间号匹配 (用户直接输或粘贴了 fam-xxx)
+      if (!target) {
+        target = list.find((r) => r.roomId.trim().toLowerCase() === q);
+      }
+      // 3. 名字包含匹配
+      if (!target) {
+        target = list.find((r) => r.name.trim().toLowerCase().includes(q));
+      }
+
+      if (target) {
+        return Response.json(
+          {
+            ok: true,
+            room: {
+              roomId: target.roomId,
+              name: target.name,
+              hasPassword: target.hasPassword
+            }
+          },
+          { headers: jsonHeaders }
+        );
+      }
+
+      return Response.json(
+        {
+          ok: false,
+          error: 'NOT_FOUND',
+          message: `未找到名为「${input}」的房间，您可以新建该房间`
+        },
+        { headers: jsonHeaders, status: 404 }
+      );
     }
 
     // =========================================================================

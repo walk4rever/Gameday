@@ -3,8 +3,9 @@ import { recordVisitedRoom, setRoomAuthToken } from '../game/roomManager.js';
 
 interface CreateRoomModalProps {
   playerName: string;
+  initialName?: string | undefined;
   onClose: () => void;
-  onCreated: (roomId: string, name: string, password?: string) => void;
+  onCreated: (roomId: string, name: string, password?: string | undefined) => void;
 }
 
 const NAME_SUGGESTIONS = [
@@ -35,10 +36,11 @@ function getRandomPass(): string {
 
 export function CreateRoomModal({
   playerName,
+  initialName,
   onClose,
   onCreated
 }: CreateRoomModalProps) {
-  const [name, setName] = useState<string>(getRandomName());
+  const [name, setName] = useState<string>(() => initialName?.trim() || getRandomName());
   const [enablePassword, setEnablePassword] = useState<boolean>(true);
   const [password, setPassword] = useState<string>('666888');
   const [loading, setLoading] = useState(false);

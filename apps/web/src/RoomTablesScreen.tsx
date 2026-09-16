@@ -120,6 +120,7 @@ export function RoomTablesScreen({
   });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSwitcherModal, setShowSwitcherModal] = useState(false);
+  const [initialCreateName, setInitialCreateName] = useState<string | undefined>(undefined);
 
   const [tables, setTables] = useState<TableInfo[]>([
     {
@@ -310,7 +311,11 @@ export function RoomTablesScreen({
       {showCreateModal && (
         <CreateRoomModal
           playerName={playerName}
-          onClose={() => setShowCreateModal(false)}
+          initialName={initialCreateName}
+          onClose={() => {
+            setShowCreateModal(false);
+            setInitialCreateName(undefined);
+          }}
           onCreated={handleRoomCreated}
         />
       )}
@@ -323,7 +328,10 @@ export function RoomTablesScreen({
             setShowSwitcherModal(false);
             onSwitchRoom(newRoomId);
           }}
-          onOpenCreate={() => setShowCreateModal(true)}
+          onOpenCreate={(name) => {
+            setInitialCreateName(name);
+            setShowCreateModal(true);
+          }}
           onClose={() => setShowSwitcherModal(false)}
         />
       )}
