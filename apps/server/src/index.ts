@@ -26,9 +26,74 @@ export default {
       const stub = env.ROOM.get(id);
       return stub.fetch(request);
     }
-    if (url.pathname === '/ws' || url.pathname === '/api/room-status' || url.pathname === '/api/room-reset') {
+    if (url.pathname === '/api/room-status') {
       const roomName = url.searchParams.get('room') ?? 'default';
-      const id = env.ROOM.idFromName(roomName);
+      const playerId = url.searchParams.get('playerId') ?? '';
+      const stub1 = env.ROOM.get(env.ROOM.idFromName(roomName));
+      const stub2 = env.ROOM.get(env.ROOM.idFromName(`${roomName}:2`));
+
+      const [res1, res2] = await Promise.all([
+        stub1.fetch(new Request(`https://internal/api/table-status?table=1&playerId=${encodeURIComponent(playerId)}`)),
+        stub2.fetch(new Request(`https://internal/api/table-status?table=2&playerId=${encodeURIComponent(playerId)}`))
+      ]);
+
+      const data1 = res1.ok ? ((await res1.json()) as { table: unknown }) : null;
+      const data2 = res2.ok ? ((await res2.json()) as { table: unknown }) : null;
+
+      const fallbackSeats = [0, 1, 2, 3].map((i) => ({
+        seat: i,
+        name: `机器人 ${i + 1}`,
+        isBot: true,
+        connected: false,
+        status: 'online' as const
+      }));
+
+      const table1Info = data1?.table ?? {
+        id: '1',
+        name: '1号桌 · 经典掼蛋',
+        type: 'guandan',
+        gameActive: false,
+        isFull: false,
+        isMember: false,
+        humanSeatsCount: 0,
+        maxSeats: 4,
+        status: 'empty',
+        seats: fallbackSeats
+      };
+
+      const table2Info = data2?.table ?? {
+        id: '2',
+        name: '2号桌 · 经典掼蛋',
+        type: 'guandan',
+        gameActive: false,
+        isFull: false,
+        isMember: false,
+        humanSeatsCount: 0,
+        maxSeats: 4,
+        status: 'empty',
+        seats: fallbackSeats
+      };
+
+      return Response.json(
+        {
+          room: roomName,
+          tables: [table1Info, table2Info]
+        },
+        {
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+            'access-control-allow-origin': '*',
+            'cache-control': 'no-cache'
+          }
+        }
+      );
+    }
+
+    if (url.pathname === '/ws' || url.pathname === '/api/room-reset') {
+      const roomName = url.searchParams.get('room') ?? 'default';
+      const tableParam = url.searchParams.get('table') ?? '1';
+      const doName = tableParam === '2' ? `${roomName}:2` : roomName;
+      const id = env.ROOM.idFromName(doName);
       const stub = env.ROOM.get(id);
       return stub.fetch(request);
     }

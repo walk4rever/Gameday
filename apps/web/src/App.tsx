@@ -10,7 +10,7 @@ import { useOnlineGame } from './game/useOnlineGame.js';
 type Mode =
   | { kind: 'auth' }
   | { kind: 'tables'; name: string; room: string }
-  | { kind: 'online'; name: string; room: string; tableId: string };
+  | { kind: 'online'; name: string; room: string; tableId: string; preferredSeat?: number };
 
 function defaultWsUrl(roomName?: string): string {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -20,13 +20,16 @@ function defaultWsUrl(roomName?: string): string {
   return url.toString();
 }
 
-function getServerUrl(roomName?: string): string {
-  if (import.meta.env.VITE_WS_URL) {
-    const url = new URL(import.meta.env.VITE_WS_URL);
-    if (roomName) url.searchParams.set('room', roomName);
-    return url.toString();
+function getServerUrl(roomName?: string, tableId?: string, seat?: number): string {
+  const base = import.meta.env.VITE_WS_URL || defaultWsUrl(roomName);
+  const url = new URL(base);
+  if (roomName) url.searchParams.set('room', roomName);
+  const table = tableId === '2' ? '2' : '1';
+  url.searchParams.set('table', table);
+  if (seat !== undefined && seat !== null) {
+    url.searchParams.set('seat', String(seat));
   }
-  return defaultWsUrl(roomName);
+  return url.toString();
 }
 
 export function App() {
@@ -58,8 +61,14 @@ export function App() {
         <RoomTablesScreen
           room={mode.room}
           playerName={mode.name}
-          onSelectTable={(tableId) =>
-            setMode({ kind: 'online', name: mode.name, room: mode.room, tableId })
+          onSelectTable={(tableId, seat) =>
+            setMode({
+              kind: 'online',
+              name: mode.name,
+              room: mode.room,
+              tableId,
+              ...(seat !== undefined ? { preferredSeat: seat } : {})
+            })
           }
           onShowRules={() => setShowGlobalRules(true)}
           onChangeNameOrRoom={() => {
@@ -74,6 +83,7 @@ export function App() {
           name={mode.name}
           room={mode.room}
           tableId={mode.tableId}
+          {...(mode.preferredSeat !== undefined ? { preferredSeat: mode.preferredSeat } : {})}
           onExit={() => setMode({ kind: 'tables', name: mode.name, room: mode.room })}
           onShowRules={() => setShowGlobalRules(true)}
         />
@@ -87,17 +97,19 @@ export function App() {
 function OnlineGame({
   name,
   room,
-  tableId: _tableId,
+  tableId,
+  preferredSeat,
   onExit,
   onShowRules
 }: {
   name: string;
   room: string;
   tableId: string;
+  preferredSeat?: number | undefined;
   onExit: () => void;
   onShowRules: () => void;
 }) {
-  const wsUrl = getServerUrl(room);
+  const wsUrl = getServerUrl(room, tableId, preferredSeat);
   const { status, view, leave } = useOnlineGame(wsUrl, name);
 
   const handleExit = () => {
@@ -113,7 +125,7 @@ function OnlineGame({
           <p className="connecting-text">
             {status === 'closed'
               ? '连接已断开，或本桌对局已满员（4人锁定）无法加入…'
-              : '正在连接 1号桌·经典掼蛋…'}
+              : `正在连接 ${tableId === '2' ? '2' : '1'}号桌 · 经典掼蛋…`}
           </p>
           <button className="secondary-action-btn" onClick={handleExit}>
             ← 返回桌子列表

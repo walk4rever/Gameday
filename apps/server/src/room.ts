@@ -306,7 +306,7 @@ export class Room extends DurableObject<Env> {
       );
     }
 
-    if (url.pathname === '/api/room-status') {
+    if (url.pathname === '/api/table-status' || url.pathname === '/api/room-status') {
       const room = this.room;
       // 检查当前是否有真正活跃在线的真人长连接
       const hasOnlineHumans = this.connections.some((c) =>
@@ -318,9 +318,7 @@ export class Room extends DurableObject<Env> {
       // 仍在对局中且未主动退出的真人玩家
       const activeHumans = humanSeats.filter((s) => s.status !== 'left');
 
-      // 自动清理孤立残留对局：
-      // 1. 全桌所有真人玩家均已主动退出 (activeHumans.length === 0 且曾有真人)
-      // 2. 或者全桌已无任何在线真人，且（牌局未开、牌局已结束、或者仅单人与机器人对局且已离线）
+      // 自动清理孤立残留对局
       const shouldReset =
         (humanSeats.length > 0 && activeHumans.length === 0) ||
         (!hasOnlineHumans && (room.game === null || isRoundOver(room.game) || humanSeats.length <= 1));
@@ -344,48 +342,43 @@ export class Room extends DurableObject<Env> {
       const isMember = queryPlayerId ? room.seats.some((s) => s.playerId === queryPlayerId) : false;
       const humanSeatsCount = room.seats.filter((s) => s.playerId !== null && !s.isBot).length;
       const isFull = gameActive || humanSeatsCount >= 4;
+      const tableId = url.searchParams.get('table') ?? '1';
+
+      const tableData = {
+        id: tableId,
+        name: `${tableId}号桌 · 经典掼蛋`,
+        type: 'guandan' as const,
+        gameActive,
+        isFull,
+        isMember,
+        humanSeatsCount,
+        maxSeats: 4,
+        status: gameActive
+          ? ('playing' as const)
+          : humanSeatsCount >= 4
+            ? ('full' as const)
+            : humanSeatsCount > 0
+              ? ('waiting' as const)
+              : ('empty' as const),
+        seats: room.seats.map((s, idx) => ({
+          seat: idx,
+          name: s.name,
+          isBot: s.isBot,
+          status: s.status,
+          playerId: s.playerId,
+          connected:
+            s.playerId !== null && this.connections.some((c) => c.playerId === s.playerId)
+        }))
+      };
+
+      if (url.pathname === '/api/table-status') {
+        return Response.json({ table: tableData }, { headers: jsonHeaders });
+      }
 
       return Response.json(
         {
           room: url.searchParams.get('room') ?? 'default',
-          tables: [
-            {
-              id: 'guandan',
-              name: '经典掼蛋',
-              type: 'guandan',
-              gameActive,
-              isFull,
-              isMember,
-              humanSeatsCount,
-              maxSeats: 4,
-              status: gameActive
-                ? 'playing'
-                : humanSeatsCount >= 4
-                  ? 'full'
-                  : humanSeatsCount > 0
-                    ? 'waiting'
-                    : 'empty',
-              seats: room.seats.map((s, idx) => ({
-                seat: idx,
-                name: s.name,
-                isBot: s.isBot,
-                status: s.status,
-                connected:
-                  s.playerId !== null && this.connections.some((c) => c.playerId === s.playerId)
-              }))
-            },
-            {
-              id: 'shuangsheng',
-              name: '经典双升 · 拖拉机',
-              type: 'shuangsheng',
-              gameActive: false,
-              isFull: false,
-              isMember: false,
-              humanSeatsCount: 0,
-              maxSeats: 4,
-              status: 'developing'
-            }
-          ]
+          tables: [tableData]
         },
         { headers: jsonHeaders }
       );
@@ -403,8 +396,14 @@ export class Room extends DurableObject<Env> {
     const name = (url.searchParams.get('name') ?? '玩家').slice(0, 12);
     if (!playerId) return new Response('missing playerId', { status: 400 });
 
+    const preferredSeatStr = url.searchParams.get('seat') ?? url.searchParams.get('preferredSeat');
+    const preferredSeat =
+      preferredSeatStr !== null && !isNaN(Number(preferredSeatStr))
+        ? (Number(preferredSeatStr) as Seat)
+        : null;
+
     const room = this.room;
-    const seat = this.assignSeat(room, playerId, name);
+    const seat = this.assignSeat(room, playerId, name, preferredSeat);
     if (seat === null) {
       const isGameActive = room.game !== null;
       const msg = isGameActive
@@ -503,7 +502,12 @@ export class Room extends DurableObject<Env> {
     return `${trimmed} (${counter})`;
   }
 
-  private assignSeat(room: StoredRoom, playerId: string, name: string): Seat | null {
+  private assignSeat(
+    room: StoredRoom,
+    playerId: string,
+    name: string,
+    preferredSeat?: Seat | null
+  ): Seat | null {
     // 1. 同一个 playerId 认回原座位（重连或恢复）
     const existing = room.seats.findIndex((s) => s.playerId === playerId);
     if (existing !== -1) {
@@ -533,6 +537,40 @@ export class Room extends DurableObject<Env> {
           return seat;
         }
       } else {
+        // 如果游戏尚未开局，且用户指定了不同的席位，检查目标席位是否空闲，支持换座/选对家
+        if (
+          room.game === null &&
+          preferredSeat !== undefined &&
+          preferredSeat !== null &&
+          preferredSeat >= 0 &&
+          preferredSeat <= 3 &&
+          preferredSeat !== seat
+        ) {
+          const dest = room.seats[preferredSeat];
+          const isVacant =
+            dest.playerId === null ||
+            dest.isBot ||
+            !this.connections.some((c) => c.playerId === dest.playerId);
+          if (isVacant) {
+            room.seats[seat] = {
+              playerId: null,
+              name: `机器人 ${seat + 1}`,
+              isBot: true,
+              status: 'online',
+              delegatedToBot: false
+            };
+            const finalName = this.disambiguateName(name, preferredSeat, room);
+            room.seats[preferredSeat] = {
+              playerId,
+              name: finalName,
+              isBot: false,
+              status: 'online',
+              delegatedToBot: false
+            };
+            return preferredSeat;
+          }
+        }
+
         const finalName = this.disambiguateName(name, seat, room);
         if (target) {
           target.name = finalName;
@@ -570,7 +608,32 @@ export class Room extends DurableObject<Env> {
       room.game = null;
     }
 
-    // 3. 空闲座位 (playerId === null 或 isBot === true)
+    // 3. 优先分配用户主动指定的 preferredSeat（若该位置空闲或为机器人）
+    if (
+      preferredSeat !== undefined &&
+      preferredSeat !== null &&
+      preferredSeat >= 0 &&
+      preferredSeat <= 3
+    ) {
+      const target = room.seats[preferredSeat];
+      const isVacant =
+        target.playerId === null ||
+        target.isBot ||
+        !this.connections.some((c) => c.playerId === target.playerId);
+      if (isVacant) {
+        const finalName = this.disambiguateName(name, preferredSeat, room);
+        room.seats[preferredSeat] = {
+          playerId,
+          name: finalName,
+          isBot: false,
+          status: 'online',
+          delegatedToBot: false
+        };
+        return preferredSeat;
+      }
+    }
+
+    // 4. 空闲座位 (playerId === null 或 isBot === true)
     const emptySeatIndex = room.seats.findIndex((s) => s.playerId === null || s.isBot);
     if (emptySeatIndex !== -1) {
       const seat = emptySeatIndex as Seat;
