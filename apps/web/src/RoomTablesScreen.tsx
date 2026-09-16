@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useOrientation } from './useOrientation.js';
 import { getOrCreatePlayerId } from './game/playerId.js';
+import { generateShareText, recordVisitedRoom } from './game/roomManager.js';
+import { CreateRoomModal } from './components/CreateRoomModal.js';
+import { RoomSwitcherModal } from './components/RoomSwitcherModal.js';
 
 export interface TableSeatInfo {
   seat: number;
@@ -26,6 +29,8 @@ export interface TableInfo {
 
 export interface RoomStatusResponse {
   room: string;
+  roomName?: string;
+  hasPassword?: boolean;
   tables: TableInfo[];
 }
 
@@ -35,6 +40,7 @@ interface RoomTablesScreenProps {
   onSelectTable: (tableId: string, seat?: number) => void;
   onShowRules: () => void;
   onChangeNameOrRoom: () => void;
+  onSwitchRoom: (newRoom: string) => void;
 }
 
 interface SeatMeta {
@@ -70,15 +76,50 @@ const DEFAULT_SEATS_2: TableSeatInfo[] = [
   { seat: 3, name: '待开放', isBot: true, connected: false, status: 'online' }
 ];
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fallback
+    }
+  }
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    const success = document.execCommand('copy');
+    textArea.remove();
+    return success;
+  } catch {
+    textArea.remove();
+    return false;
+  }
+}
+
 export function RoomTablesScreen({
   room,
   playerName,
   onSelectTable,
   onShowRules,
-  onChangeNameOrRoom
+  onChangeNameOrRoom,
+  onSwitchRoom
 }: RoomTablesScreenProps) {
   const { isLandscape, needsForcedRotation, toggleOrientation } = useOrientation();
   const myPlayerId = getOrCreatePlayerId();
+
+  const [roomMeta, setRoomMeta] = useState<{ name: string; hasPassword: boolean }>({
+    name: room === 'default' ? '公共大厅' : '家庭游戏室',
+    hasPassword: false
+  });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showSwitcherModal, setShowSwitcherModal] = useState(false);
 
   const [tables, setTables] = useState<TableInfo[]>([
     {
@@ -109,6 +150,11 @@ export function RoomTablesScreen({
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
   const fetchStatus = async () => {
     try {
       setLoading(true);
@@ -117,6 +163,17 @@ export function RoomTablesScreen({
       );
       if (res.ok) {
         const data = (await res.json()) as RoomStatusResponse;
+        if (data.roomName) {
+          setRoomMeta({
+            name: data.roomName,
+            hasPassword: Boolean(data.hasPassword)
+          });
+          recordVisitedRoom({
+            roomId: room,
+            name: data.roomName,
+            hasPassword: Boolean(data.hasPassword)
+          });
+        }
         if (data.tables && Array.isArray(data.tables)) {
           setTables(data.tables);
         }
@@ -136,9 +193,32 @@ export function RoomTablesScreen({
     return () => clearInterval(timer);
   }, [room]);
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 2500);
+  const handleInvite = async () => {
+    const shareText = generateShareText({
+      roomId: room,
+      roomName: roomMeta.name,
+      hasPassword: roomMeta.hasPassword
+    });
+
+    const success = await copyTextToClipboard(shareText);
+    if (success) {
+      showToast('🎉 已复制微信邀请文案！直接发给微信好友/家人即可入座');
+    } else {
+      showToast('未能自动复制，请复制当前浏览器地址发给家人');
+    }
+  };
+
+  const handleRoomCreated = (newRoomId: string, newRoomName: string, password?: string) => {
+    setShowCreateModal(false);
+    onSwitchRoom(newRoomId);
+    const shareText = generateShareText({
+      roomId: newRoomId,
+      roomName: newRoomName,
+      hasPassword: Boolean(password),
+      ...(password !== undefined ? { password } : {})
+    });
+    void copyTextToClipboard(shareText);
+    showToast(`🏡 已创建房间「${newRoomName}」，邀请文案已复制到剪贴板！`);
   };
 
   return (
@@ -147,15 +227,53 @@ export function RoomTablesScreen({
         needsForcedRotation ? 'app-forced-landscape' : ''
       }`}
     >
-      {/* 极简顶部条 */}
+      {/* 极简顶部条：房间名、定制邀请、换房与控制 */}
       <header className="room-tables-header minimal-header">
-        <div className="room-info-minimal">
+        <div
+          className="room-info-minimal clickable-room-title"
+          onClick={() => setShowSwitcherModal(true)}
+          title="点击切换或查看常用房间"
+        >
           <span className="room-symbol">🏡</span>
-          <span className="room-title-text">房间 {room}</span>
-          <span className="room-player-tag">玩家: <strong>{playerName}</strong></span>
+          <div className="room-meta-group">
+            <div className="room-name-row">
+              <span className="room-title-text">{roomMeta.name}</span>
+              {roomMeta.hasPassword && (
+                <span className="room-badge-lock" title="6位密码保护房间">
+                  🔒
+                </span>
+              )}
+              <span className="room-code-badge">{room}</span>
+              <span className="room-arrow-down">▾</span>
+            </div>
+            <span className="room-player-tag">
+              玩家: <strong>{playerName}</strong>
+            </span>
+          </div>
         </div>
 
         <div className="room-header-btns">
+          <button
+            className="room-highlight-btn invite-btn"
+            onClick={() => void handleInvite()}
+            title="一键复制微信邀请文案发给家人"
+          >
+            📤 邀请家人
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setShowCreateModal(true)}
+            title="创建新专属房间"
+          >
+            ➕ 新建
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setShowSwitcherModal(true)}
+            title="切换常去房间"
+          >
+            🚪 换房
+          </button>
           <button
             className="icon-btn orientation-toggle-btn"
             onClick={toggleOrientation}
@@ -169,7 +287,7 @@ export function RoomTablesScreen({
           <button className="icon-btn" onClick={() => void fetchStatus()} title="刷新桌况">
             {loading ? '⏳' : '🔄'}
           </button>
-          <button className="icon-btn" onClick={onChangeNameOrRoom} title="更换昵称或房间">
+          <button className="icon-btn" onClick={onChangeNameOrRoom} title="退出登录">
             ← 退出
           </button>
         </div>
@@ -187,6 +305,28 @@ export function RoomTablesScreen({
           />
         ))}
       </main>
+
+      {/* 创建房间弹窗 */}
+      {showCreateModal && (
+        <CreateRoomModal
+          playerName={playerName}
+          onClose={() => setShowCreateModal(false)}
+          onCreated={handleRoomCreated}
+        />
+      )}
+
+      {/* 常用房间切换弹窗 */}
+      {showSwitcherModal && (
+        <RoomSwitcherModal
+          currentRoom={room}
+          onSelectRoom={(newRoomId) => {
+            setShowSwitcherModal(false);
+            onSwitchRoom(newRoomId);
+          }}
+          onOpenCreate={() => setShowCreateModal(true)}
+          onClose={() => setShowSwitcherModal(false)}
+        />
+      )}
 
       {/* 浮动轻提示 */}
       {toastMsg && <div className="room-tables-toast">{toastMsg}</div>}

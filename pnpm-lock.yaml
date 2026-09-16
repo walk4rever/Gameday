@@ -67,6 +67,9 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.3(tsx@4.23.13)
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.7(tsx@4.23.13)
 
   packages/bot:
     dependencies:

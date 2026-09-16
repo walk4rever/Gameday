@@ -65,10 +65,22 @@ export interface ActiveTributeState {
   exchanges: ActiveTributeExchange[];
 }
 
+export interface RoomMetaRecord {
+  roomId: string;
+  name: string;
+  hasPassword: boolean;
+  passwordHash?: string | undefined;
+  salt?: string | undefined;
+  createdAt: number;
+  createdBy: string;
+}
+
 interface StoredRoom {
   /** null = 还在等人按"开打"的大厅阶段，进房间先看到谁在线，按开打才发牌。 */
   game: GameState | null;
   seats: [SeatState, SeatState, SeatState, SeatState];
+  /** 房间自定义元信息（名字、密码哈希等） */
+  meta?: RoomMetaRecord | null;
   /** 战队级数索引：[南/北队, 东/西队]，索引对应 SHAPE_RANKS 0~12 ('2'~'A') */
   teamLevels?: [number, number];
   /** 当前坐庄/防守战队：0 (南/北队) 或 1 (东/西队) */
@@ -105,6 +117,7 @@ function freshRoom(): StoredRoom {
       status: 'online' as const,
       delegatedToBot: false
     })) as StoredRoom['seats'],
+    meta: null,
     teamLevels: [0, 0],
     dealerTeam: 0,
     roundNumber: 1,
@@ -186,6 +199,126 @@ export class Room extends DurableObject<Env> {
       'Access-Control-Allow-Origin': '*',
       'Cache-Control': 'no-store'
     };
+
+    // =========================================================================
+    // 0. 房间专属定制与密码验证接口 (Room Meta & Password Protection)
+    // =========================================================================
+    if (url.pathname === '/api/room/init-meta' && request.method === 'POST') {
+      try {
+        const body = (await request.json()) as {
+          roomId: string;
+          name: string;
+          password?: string;
+          createdBy?: string;
+        };
+        const name = (body.name || '温馨家庭房').trim().slice(0, 16);
+        const password = (body.password || '').trim();
+        let passwordHash: string | undefined;
+        let salt: string | undefined;
+        let hasPassword = false;
+
+        if (password) {
+          if (!/^\d{6}$/.test(password)) {
+            return Response.json(
+              { ok: false, error: 'INVALID_PASSWORD', message: '房间密码需为 6 位纯数字' },
+              { headers: jsonHeaders, status: 400 }
+            );
+          }
+          hasPassword = true;
+          salt = crypto.randomUUID();
+          passwordHash = await hashGesture(password, salt);
+        }
+
+        this.room.meta = {
+          roomId: body.roomId,
+          name,
+          hasPassword,
+          passwordHash,
+          salt,
+          createdAt: Date.now(),
+          createdBy: (body.createdBy || '系统').trim()
+        };
+        await this.ctx.storage.put('room', this.room);
+
+        let token: string | undefined;
+        if (hasPassword && passwordHash) {
+          token = await hashGesture(passwordHash, 'room_auth_token_v1');
+        }
+
+        return Response.json(
+          {
+            ok: true,
+            roomId: body.roomId,
+            name,
+            hasPassword,
+            token
+          },
+          { headers: jsonHeaders }
+        );
+      } catch {
+        return Response.json(
+          { ok: false, error: 'SERVER_ERROR', message: '初始化房间失败' },
+          { headers: jsonHeaders, status: 500 }
+        );
+      }
+    }
+
+    if (url.pathname === '/api/room/meta' && request.method === 'GET') {
+      const meta = this.room.meta;
+      const roomId = url.searchParams.get('room') || 'default';
+      return Response.json(
+        {
+          ok: true,
+          roomId: meta?.roomId ?? roomId,
+          name: meta?.name ?? (roomId === 'default' ? '公共大厅' : '家庭游戏室'),
+          hasPassword: Boolean(meta?.hasPassword),
+          createdAt: meta?.createdAt ?? 0,
+          createdBy: meta?.createdBy ?? '系统'
+        },
+        { headers: jsonHeaders }
+      );
+    }
+
+    if (url.pathname === '/api/room/verify-password' && request.method === 'POST') {
+      try {
+        const body = (await request.json()) as { password?: string };
+        const password = (body.password || '').trim();
+        const meta = this.room.meta;
+
+        if (!meta || !meta.hasPassword) {
+          return Response.json(
+            { ok: true, token: 'no_password_required' },
+            { headers: jsonHeaders }
+          );
+        }
+
+        if (!meta.passwordHash || !meta.salt) {
+          return Response.json(
+            { ok: true, token: 'bypass' },
+            { headers: jsonHeaders }
+          );
+        }
+
+        const computed = await hashGesture(password, meta.salt);
+        if (computed !== meta.passwordHash) {
+          return Response.json(
+            { ok: false, message: '房间密码错误，请重新输入 6 位数字密码' },
+            { headers: jsonHeaders, status: 403 }
+          );
+        }
+
+        const token = await hashGesture(meta.passwordHash, 'room_auth_token_v1');
+        return Response.json(
+          { ok: true, token },
+          { headers: jsonHeaders }
+        );
+      } catch {
+        return Response.json(
+          { ok: false, message: '验证失败，请稍后重试' },
+          { headers: jsonHeaders, status: 500 }
+        );
+      }
+    }
 
     // =========================================================================
     // 1. 用户认证模块：极简注册（用户名 + 手势密码）与手势登录
@@ -382,12 +515,17 @@ export class Room extends DurableObject<Env> {
       };
 
       if (url.pathname === '/api/table-status') {
-        return Response.json({ table: tableData }, { headers: jsonHeaders });
+        return Response.json(
+          { table: tableData, meta: this.room.meta ?? null },
+          { headers: jsonHeaders }
+        );
       }
 
       return Response.json(
         {
           room: url.searchParams.get('room') ?? 'default',
+          roomName: this.room.meta?.name ?? '家庭游戏室',
+          hasPassword: Boolean(this.room.meta?.hasPassword),
           tables: [tableData]
         },
         { headers: jsonHeaders }
@@ -405,6 +543,27 @@ export class Room extends DurableObject<Env> {
     const playerId = url.searchParams.get('playerId');
     const name = (url.searchParams.get('name') ?? '玩家').slice(0, 12);
     if (!playerId) return new Response('missing playerId', { status: 400 });
+
+    // 密码保护房间鉴权校验
+    if (this.room.meta?.hasPassword && this.room.meta.passwordHash) {
+      const roomToken = url.searchParams.get('roomToken');
+      const roomPass = url.searchParams.get('roomPass');
+      let authorized = false;
+      if (roomToken) {
+        const expectedToken = await hashGesture(this.room.meta.passwordHash, 'room_auth_token_v1');
+        if (roomToken === expectedToken) authorized = true;
+      }
+      if (!authorized && roomPass) {
+        const computed = await hashGesture(roomPass, this.room.meta.salt || '');
+        if (computed === this.room.meta.passwordHash) authorized = true;
+      }
+      if (!authorized) {
+        return new Response('Unauthorized: 房间设有密码，请输入正确密码后再进入', {
+          status: 403,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
+      }
+    }
 
     const preferredSeatStr = url.searchParams.get('seat') ?? url.searchParams.get('preferredSeat');
     const preferredSeat =

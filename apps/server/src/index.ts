@@ -21,11 +21,80 @@ export default {
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
+    // 跨域预检
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Max-Age': '86400'
+        }
+      });
+    }
+
     if (url.pathname.startsWith('/api/auth/')) {
       const id = env.ROOM.idFromName('__system_auth__');
       const stub = env.ROOM.get(id);
       return stub.fetch(request);
     }
+
+    // 创建专属新房间 (生成唯一字母数字短序列 ID)
+    if (url.pathname === '/api/room/create' && request.method === 'POST') {
+      try {
+        const body = (await request.json()) as {
+          name?: string;
+          password?: string;
+          createdBy?: string;
+        };
+        const chars = '23456789abcdefghjkmnpqrstuvwxyz';
+        let idStr = '';
+        const bytes = new Uint8Array(6);
+        crypto.getRandomValues(bytes);
+        for (let i = 0; i < 6; i++) {
+          idStr += chars[bytes[i]! % chars.length];
+        }
+        const roomId = `fam-${idStr}`;
+
+        const stub = env.ROOM.get(env.ROOM.idFromName(roomId));
+        const initRes = await stub.fetch(
+          new Request('https://internal/api/room/init-meta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roomId,
+              name: body.name || '温馨家庭房',
+              password: body.password || '',
+              createdBy: body.createdBy || '房主'
+            })
+          })
+        );
+        return initRes;
+      } catch {
+        return Response.json(
+          { ok: false, message: '创建房间失败，请稍后重试' },
+          {
+            status: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          }
+        );
+      }
+    }
+
+    // 房间元数据查询与 6 位密码校验
+    if (
+      url.pathname === '/api/room/meta' ||
+      url.pathname === '/api/room/verify-password'
+    ) {
+      const roomName = url.searchParams.get('room') ?? 'default';
+      const stub = env.ROOM.get(env.ROOM.idFromName(roomName));
+      return stub.fetch(request);
+    }
+
     if (url.pathname === '/api/room-status') {
       const roomName = url.searchParams.get('room') ?? 'default';
       const playerId = url.searchParams.get('playerId') ?? '';
@@ -35,7 +104,9 @@ export default {
           `https://internal/api/table-status?table=1&playerId=${encodeURIComponent(playerId)}`
         )
       );
-      const data1 = res1.ok ? ((await res1.json()) as { table: unknown }) : null;
+      const data1 = res1.ok
+        ? ((await res1.json()) as { table: unknown; meta?: { name?: string; hasPassword?: boolean } })
+        : null;
 
       const fallbackSeats = [0, 1, 2, 3].map((i) => ({
         seat: i,
@@ -77,9 +148,13 @@ export default {
         }))
       };
 
+      const meta = data1?.meta;
+
       return Response.json(
         {
           room: roomName,
+          roomName: meta?.name ?? (roomName === 'default' ? '公共大厅' : '家庭游戏室'),
+          hasPassword: Boolean(meta?.hasPassword),
           tables: [table1Info, table2Info]
         },
         {

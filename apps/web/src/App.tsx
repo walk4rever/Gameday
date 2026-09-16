@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthScreen } from './AuthScreen.js';
 import { GameScreen } from './GameScreen.js';
 import { LobbyScreen } from './LobbyScreen.js';
 import { RoomTablesScreen } from './RoomTablesScreen.js';
 import { RulesModal } from './RulesModal.js';
+import { RoomPasswordModal } from './components/RoomPasswordModal.js';
 import { getCurrentUser, logoutUser } from './game/playerId.js';
+import { getRoomAuthToken } from './game/roomManager.js';
 import { useOnlineGame } from './game/useOnlineGame.js';
 
 type Mode =
@@ -23,7 +25,13 @@ function defaultWsUrl(roomName?: string): string {
 function getServerUrl(roomName?: string, tableId?: string, seat?: number): string {
   const base = import.meta.env.VITE_WS_URL || defaultWsUrl(roomName);
   const url = new URL(base);
-  if (roomName) url.searchParams.set('room', roomName);
+  if (roomName) {
+    url.searchParams.set('room', roomName);
+    const token = getRoomAuthToken(roomName);
+    if (token) {
+      url.searchParams.set('roomToken', token);
+    }
+  }
   const table = tableId === '2' ? '2' : '1';
   url.searchParams.set('table', table);
   if (seat !== undefined && seat !== null) {
@@ -42,7 +50,72 @@ export function App() {
     return { kind: 'auth' };
   });
 
+  const [passwordRequiredRoom, setPasswordRequiredRoom] = useState<{
+    roomId: string;
+    roomName: string;
+  } | null>(null);
+
   const [showGlobalRules, setShowGlobalRules] = useState(false);
+
+  // 房间切换时同步浏览器 URL 与历史记录
+  const switchRoom = (newRoom: string) => {
+    const cleanRoom = newRoom.trim() || 'default';
+    const currentUrl = new URL(window.location.href);
+    if (cleanRoom === 'default') {
+      currentUrl.searchParams.delete('room');
+    } else {
+      currentUrl.searchParams.set('room', cleanRoom);
+    }
+    window.history.replaceState({}, '', currentUrl.toString());
+
+    setMode((prev) => {
+      if (prev.kind === 'tables') {
+        return { ...prev, room: cleanRoom };
+      }
+      if (prev.kind === 'online') {
+        return { kind: 'tables', name: prev.name, room: cleanRoom };
+      }
+      return prev;
+    });
+  };
+
+  // 检测当前房间是否需要密码拦截
+  useEffect(() => {
+    if (mode.kind === 'auth') return;
+    const currentRoom = mode.room;
+    if (!currentRoom || currentRoom === 'default') {
+      setPasswordRequiredRoom(null);
+      return;
+    }
+
+    const token = getRoomAuthToken(currentRoom);
+    let cancelled = false;
+
+    void fetch(`/api/room/meta?room=${encodeURIComponent(currentRoom)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { ok?: boolean; hasPassword?: boolean; name?: string } | null) => {
+        if (cancelled) return;
+        if (data?.hasPassword) {
+          if (!token) {
+            setPasswordRequiredRoom({
+              roomId: currentRoom,
+              roomName: data.name || '专属房间'
+            });
+          } else {
+            setPasswordRequiredRoom(null);
+          }
+        } else {
+          setPasswordRequiredRoom(null);
+        }
+      })
+      .catch(() => {
+        // 网络异常暂不强拦截
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode.kind, mode.kind !== 'auth' ? mode.room : '']);
 
   return (
     <>
@@ -75,6 +148,7 @@ export function App() {
             logoutUser();
             setMode({ kind: 'auth' });
           }}
+          onSwitchRoom={switchRoom}
         />
       )}
 
@@ -86,6 +160,20 @@ export function App() {
           {...(mode.preferredSeat !== undefined ? { preferredSeat: mode.preferredSeat } : {})}
           onExit={() => setMode({ kind: 'tables', name: mode.name, room: mode.room })}
           onShowRules={() => setShowGlobalRules(true)}
+        />
+      )}
+
+      {passwordRequiredRoom && (
+        <RoomPasswordModal
+          roomId={passwordRequiredRoom.roomId}
+          roomName={passwordRequiredRoom.roomName}
+          onSuccess={() => {
+            setPasswordRequiredRoom(null);
+          }}
+          onCancel={() => {
+            setPasswordRequiredRoom(null);
+            switchRoom('default');
+          }}
         />
       )}
 
