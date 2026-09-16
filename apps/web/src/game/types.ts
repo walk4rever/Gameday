@@ -1,5 +1,11 @@
 import type { Seat } from '@guandan/engine';
-import type { PausedInfo, PlayerStatus, SeatTrickAction, TributePhaseInfo } from '@guandan/protocol';
+import type {
+  MatchSessionInfo,
+  PausedInfo,
+  PlayerStatus,
+  SeatTrickAction,
+  TributePhaseInfo
+} from '@guandan/protocol';
 import type { Card, Play, Rank } from '@guandan/rules';
 
 export interface SeatView {
@@ -31,11 +37,13 @@ export interface UseGameResult {
     description: string;
   } | null;
   tributePhase?: TributePhaseInfo | null;
+  matchSession?: MatchSessionInfo | null;
   error: string | null;
   clearError: () => void;
   playSelected: (cards: Card[]) => void;
   pass: () => void;
   restart: () => void;
+  resetMatch: () => void;
   payTribute: (cardId: string) => void;
   returnTribute: (cardId: string) => void;
   delegateBot: (seat: Seat) => void;

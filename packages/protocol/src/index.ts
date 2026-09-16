@@ -12,12 +12,22 @@ export type ClientMessage =
   | { type: 'play'; cardIds: string[] }
   | { type: 'pass' }
   | { type: 'restart' }
+  | { type: 'reset_match' }
   | { type: 'pay_tribute'; cardId: string }
   | { type: 'return_tribute'; cardId: string }
   | { type: 'leave' }
   | { type: 'ping' }
   | { type: 'delegate_bot'; seat: Seat }
   | { type: 'dissolve' };
+
+export interface MatchSessionInfo {
+  roundNumber: number;
+  teamLevels: [number, number];
+  teamRanks: [Rank, Rank];
+  dealerTeam: 0 | 1;
+  isMatchOver: boolean;
+  matchWinnerTeam?: 0 | 1 | undefined;
+}
 
 export interface LobbySeatSnapshot {
   seat: Seat;
@@ -86,6 +96,7 @@ export interface StateMessage {
     description: string;
   } | null;
   tributePhase?: TributePhaseInfo | null;
+  matchSession?: MatchSessionInfo | null;
 }
 
 export interface ErrorMessage {

@@ -6,6 +6,7 @@ import type {
   ClientMessage,
   LobbyMessage,
   LobbySeatSnapshot,
+  MatchSessionInfo,
   PausedInfo,
   PlayerStatus,
   SeatSnapshot,
@@ -72,6 +73,12 @@ interface StoredRoom {
   teamLevels?: [number, number];
   /** 当前坐庄/防守战队：0 (南/北队) 或 1 (东/西队) */
   dealerTeam?: 0 | 1;
+  /** 当前比赛进行的第几局（从 1 开始累加） */
+  roundNumber?: number;
+  /** 是否某战队已成功打过 A 赢得整场比赛 */
+  isMatchOver?: boolean;
+  /** 赢得整场比赛的战队 (0: 南北队, 1: 东西队) */
+  matchWinnerTeam?: 0 | 1 | null;
   lastTribute?: {
     type: 'none' | 'anti_tribute' | 'single' | 'double';
     description: string;
@@ -100,6 +107,9 @@ function freshRoom(): StoredRoom {
     })) as StoredRoom['seats'],
     teamLevels: [0, 0],
     dealerTeam: 0,
+    roundNumber: 1,
+    isMatchOver: false,
+    matchWinnerTeam: null,
     lastTribute: null,
     tributeState: null
   };
@@ -774,9 +784,28 @@ export class Room extends DurableObject<Env> {
       }
       room.teamLevels = room.teamLevels ?? [0, 0];
       room.dealerTeam = room.dealerTeam ?? 0;
+      room.roundNumber = room.roundNumber ?? 1;
+      room.isMatchOver = false;
+      room.matchWinnerTeam = null;
       const startLevel = SHAPE_RANKS[room.teamLevels[room.dealerTeam]] ?? '2';
       room.lastTribute = null;
       room.game = dealNewGame(startLevel, 0);
+      await this.afterStateChange(room);
+      return;
+    }
+
+    if (message.type === 'reset_match') {
+      room.teamLevels = [0, 0];
+      room.dealerTeam = 0;
+      room.roundNumber = 1;
+      room.isMatchOver = false;
+      room.matchWinnerTeam = null;
+      room.tributeState = null;
+      room.lastTribute = {
+        type: 'none',
+        description: '比赛已重置，双方重新从打 2 开打！'
+      };
+      room.game = dealNewGame('2', 0);
       await this.afterStateChange(room);
       return;
     }
@@ -788,6 +817,22 @@ export class Room extends DurableObject<Env> {
     const game = room.game;
 
     if (message.type === 'restart') {
+      if (room.isMatchOver) {
+        room.teamLevels = [0, 0];
+        room.dealerTeam = 0;
+        room.roundNumber = 1;
+        room.isMatchOver = false;
+        room.matchWinnerTeam = null;
+        room.tributeState = null;
+        room.lastTribute = {
+          type: 'none',
+          description: '新一轮比赛开始，双方重新从打 2 开打！'
+        };
+        room.game = dealNewGame('2', 0);
+        await this.afterStateChange(room);
+        return;
+      }
+
       let nextLevel: Rank = '2';
       let nextStartSeat: Seat = 0;
 
@@ -806,17 +851,31 @@ export class Room extends DurableObject<Env> {
         const partnerSeat = ((firstSeat + 2) % 4) as Seat;
         const secondRank = finishOrder.indexOf(partnerSeat);
 
+        room.teamLevels = room.teamLevels ?? [0, 0];
+        const currentIdx = room.teamLevels[winningTeam] ?? 0;
+
+        // 掼蛋过 A 决胜判定：当前打 A (12) 且获胜（双上或单上，平局不算过 A）
+        if (currentIdx === SHAPE_RANKS.length - 1 && secondRank !== 3) {
+          room.isMatchOver = true;
+          room.matchWinnerTeam = winningTeam;
+          room.lastTribute = {
+            type: 'none',
+            description: `🎉 恭喜${winningTeam === 0 ? '南北队' : '东西队'}成功打过 A，夺得本场比赛总冠军！`
+          };
+          await this.afterStateChange(room);
+          return;
+        }
+
         let bonus = 0;
         if (secondRank === 1) bonus = 3; // 双上
         else if (secondRank === 2) bonus = 2; // 单上
         else bonus = 1; // 平局 (头游方升 1 级)
 
-        room.teamLevels = room.teamLevels ?? [0, 0];
-        const currentIdx = room.teamLevels[winningTeam] ?? 0;
         const nextIdx = Math.min(SHAPE_RANKS.length - 1, currentIdx + bonus);
         room.teamLevels[winningTeam] = nextIdx;
         room.dealerTeam = winningTeam;
         nextLevel = SHAPE_RANKS[nextIdx] ?? '2';
+        room.roundNumber = (room.roundNumber ?? 1) + 1;
 
         const newHands = dealHands(shuffleDeck(createDeck()));
 
@@ -1230,6 +1289,21 @@ export class Room extends DurableObject<Env> {
         }
       : null;
 
+    const teamLevels = this.room.teamLevels ?? [0, 0];
+    const teamRanks: [Rank, Rank] = [
+      SHAPE_RANKS[teamLevels[0]] ?? '2',
+      SHAPE_RANKS[teamLevels[1]] ?? '2'
+    ];
+
+    const matchSession: MatchSessionInfo = {
+      roundNumber: this.room.roundNumber ?? 1,
+      teamLevels,
+      teamRanks,
+      dealerTeam: this.room.dealerTeam ?? 0,
+      isMatchOver: Boolean(this.room.isMatchOver),
+      matchWinnerTeam: this.room.matchWinnerTeam ?? undefined
+    };
+
     return {
       type: 'state',
       you: { seat: viewerSeat, hand: game.hands[viewerSeat] },
@@ -1242,7 +1316,8 @@ export class Room extends DurableObject<Env> {
       roundOver,
       paused: this.getPausedInfo(game, roomSeats),
       tribute: this.room.lastTribute ?? null,
-      tributePhase
+      tributePhase,
+      matchSession
     };
   }
 }

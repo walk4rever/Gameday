@@ -346,6 +346,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showRules, setShowRules] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => sound.isEnabled());
 
   // 容器宽度动态感知，严密防止最左边与最右边的牌在不同手机视口上被裁切
@@ -683,12 +684,43 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
     >
       {banner}
 
-      {/* 顶部状态与快捷控制条 */}
+      {/* 顶部常驻会话比分看板 (Session Scoreboard) 与控制栏 */}
       <div className="game-top-bar">
-        <div className="top-level-badge" title="当前主牌/级牌">
-          <span className="crown-icon">👑</span>
-          <span className="level-text">级牌: {level}</span>
-          <span className="level-wild-hint">（红桃{level}逢人配）</span>
+        <div className="top-session-scoreboard">
+          <div
+            className={`score-team-pill score-team-ns ${
+              (humanSeat % 2) === 0 ? 'is-my-team' : ''
+            }`}
+            title="南北队当前级数"
+          >
+            <span className="score-team-name">🛡️ 南北</span>
+            <span className="score-rank-text">打 {game.matchSession?.teamRanks[0] ?? level}</span>
+            {game.matchSession?.dealerTeam === 0 && (
+              <span className="dealer-badge" title="当前发球/当庄">
+                庄
+              </span>
+            )}
+          </div>
+
+          <div className="score-center-meta">
+            <span className="score-round-pill">第 {game.matchSession?.roundNumber ?? 1} 副</span>
+            <span className="score-wild-hint">红桃{level}配</span>
+          </div>
+
+          <div
+            className={`score-team-pill score-team-ew ${
+              (humanSeat % 2) === 1 ? 'is-my-team' : ''
+            }`}
+            title="东西队当前级数"
+          >
+            <span className="score-team-name">⚔️ 东西</span>
+            <span className="score-rank-text">打 {game.matchSession?.teamRanks[1] ?? '2'}</span>
+            {game.matchSession?.dealerTeam === 1 && (
+              <span className="dealer-badge" title="当前发球/当庄">
+                庄
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="top-bar-controls">
@@ -709,8 +741,12 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           <button className="top-icon-btn" onClick={() => setShowRules(true)} title="掼蛋规则速查">
             📖 规则
           </button>
-          <button className="top-icon-btn" onClick={game.restart} title="重新发牌开新局">
-            🔄 重开
+          <button
+            className="top-icon-btn"
+            onClick={() => setShowResetConfirm(true)}
+            title="重置整场比赛，重新从打 2 开打"
+          >
+            🔄 从2开始
           </button>
           {onExit && (
             <button
@@ -1023,8 +1059,41 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           finishOrder={finishOrder}
           humanSeat={humanSeat}
           seats={seats}
+          matchSession={game.matchSession ?? null}
           onRestart={game.restart}
+          onResetMatch={game.resetMatch}
         />
+      )}
+
+      {/* 重置比赛从打2开局确认弹窗 */}
+      {showResetConfirm && (
+        <div className="modal-backdrop" onClick={() => setShowResetConfirm(false)}>
+          <div className="exit-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="exit-modal-title">🔄 重置比赛从打 2 开始？</h3>
+            <p className="exit-modal-desc">
+              确定要重置当前对决进度吗？双方战队级数将归零重回打 2，局数重新从第 1 副起计。
+            </p>
+            <div className="exit-modal-actions">
+              <button
+                type="button"
+                className="secondary-action-btn"
+                onClick={() => setShowResetConfirm(false)}
+              >
+                继续当前比赛
+              </button>
+              <button
+                type="button"
+                className="primary-action-btn"
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  game.resetMatch();
+                }}
+              >
+                确认从打 2 重开
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 退出牌桌确认弹窗 */}
