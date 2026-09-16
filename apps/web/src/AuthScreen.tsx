@@ -200,13 +200,9 @@ export function AuthScreen({ onSuccess, onShowRules }: AuthScreenProps) {
       <div className="join-card auth-card">
         {/* 品牌标识 */}
         <div className="join-brand">
-          <div className="join-suits-emblem">
-            <span className="suit-spade">♠</span>
-            <span className="suit-heart">♥</span>
-            <span className="suit-club">♣</span>
-            <span className="suit-diamond">♦</span>
-          </div>
-          <h1 className="join-title">掼 蛋</h1>
+          <img src="/favicon.svg" alt="Gameday Logo" className="join-brand-logo" />
+          <h1 className="join-title">Gameday</h1>
+          <div className="join-slogan-badge">Gameday - 游戏日</div>
           <p className="join-subtitle">
             {mode === 'login' ? '家庭联机 · 手势密码极速登录' : '家庭联机 · 极简手势账号注册'}
           </p>

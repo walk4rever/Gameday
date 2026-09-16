@@ -151,9 +151,9 @@ export function SelectRoomScreen({
       {/* 顶部导航栏 */}
       <header className="room-tables-header select-room-header">
         <div className="room-info-minimal">
-          <span className="room-symbol">🎴</span>
+          <img src="/favicon.svg" alt="Gameday Logo" className="nav-brand-logo" />
           <div className="room-meta-group">
-            <span className="room-title-text select-page-title">Gameday · 家庭牌室</span>
+            <span className="room-title-text select-page-title">Gameday - 游戏日</span>
             <span className="room-player-tag">
               玩家: <strong>{playerName}</strong>
             </span>

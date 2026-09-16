@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- 背景渐变：从左上深翡翠到右下深邃暗夜蓝 -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="55%" stop-color="#022c22" />
+      <stop offset="100%" stop-color="#0a1128" />
+    </linearGradient>
+
+    <!-- 奢华金质边框渐变 -->
+    <linearGradient id="goldRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="30%" stop-color="#f59e0b" />
+      <stop offset="60%" stop-color="#fbbf24" />
+      <stop offset="85%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <!-- 金色字母 G 渐变 -->
+    <linearGradient id="goldG" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="20%" stop-color="#fef08a" />
+      <stop offset="55%" stop-color="#f59e0b" />
+      <stop offset="85%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+
+    <!-- 红心专属明艳渐变 -->
+    <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f87171" />
+      <stop offset="40%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+
+    <!-- 阴影滤镜 -->
+    <filter id="mainShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.45" />
+    </filter>
+
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#f59e0b" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- 1. 外层 App 图标圆角方底（高辨识度 Squircle） -->
+  <rect x="18" y="18" width="476" height="476" rx="112" fill="url(#bgGrad)" filter="url(#mainShadow)" />
+  <rect x="24" y="24" width="464" height="464" rx="106" fill="none" stroke="url(#goldRim)" stroke-width="12" opacity="0.95" />
+
+  <!-- 2. 台面柔光聚光灯效果 -->
+  <circle cx="256" cy="240" r="170" fill="#10b981" opacity="0.12" />
+
+  <!-- 3. 背景牌扇（左侧黑桃牌，逆时针倾斜 15 度） -->
+  <g transform="translate(256, 250) rotate(-16) translate(-256, -250)" filter="url(#cardShadow)">
+    <rect x="140" y="125" width="150" height="225" rx="16" fill="#f8fafc" stroke="#cbd5e1" stroke-width="3" />
+    <!-- 左上角黑桃 -->
+    <path d="M 166 148 C 166 142 160 137 160 144 C 160 148 166 154 166 154 C 166 154 172 148 172 144 C 172 137 166 142 166 148 Z" fill="#0f172a" transform="scale(1.2) translate(-25, -20)" />
+    <!-- 大黑桃中心暗印 -->
+    <path d="M 215 230 C 215 210 195 195 195 215 C 195 228 215 245 215 245 C 215 245 235 228 235 215 C 235 195 215 210 215 230 Z" fill="#0f172a" opacity="0.1" transform="scale(1.8) translate(-90, -90)" />
+  </g>
+
+  <!-- 4. 背景牌扇（右侧红桃牌，顺时针倾斜 14 度） -->
+  <g transform="translate(256, 250) rotate(14) translate(-256, -250)" filter="url(#cardShadow)">
+    <rect x="222" y="125" width="150" height="225" rx="16" fill="#ffffff" stroke="#fecdd3" stroke-width="3" />
+    <!-- 右上角红桃 -->
+    <path d="M 338 148 C 338 141 330 137 330 145 C 330 150 338 157 338 157 C 338 157 346 150 346 145 C 346 137 338 141 338 148 Z" fill="url(#heartGrad)" transform="scale(1.2) translate(-46, -20)" />
+    <!-- 大红桃中心暗印 -->
+    <path d="M 297 232 C 297 215 278 208 278 223 C 278 235 297 250 297 250 C 297 250 316 235 316 223 C 316 208 297 215 297 232 Z" fill="url(#heartGrad)" opacity="0.16" transform="scale(1.7) translate(-120, -95)" />
+  </g>
+
+  <!-- 5. 核心品牌视觉标志：现代雕塑感金标 "G" (GAMEDAY) -->
+  <g filter="url(#goldGlow)">
+    <!-- 字母 G 外轮廓与切角立体造型 -->
+    <path d="
+      M 370 178
+      L 326 210
+      C 308 190 286 178 258 178
+      C 204 178 166 218 166 270
+      C 166 322 205 362 260 362
+      C 305 362 336 338 346 298
+      L 265 298
+      L 265 254
+      L 392 254
+      C 395 272 396 288 396 304
+      C 396 364 345 412 260 412
+      C 172 412 112 348 112 270
+      C 112 192 174 128 260 128
+      C 306 128 345 146 370 178
+      Z
+    " fill="url(#goldG)" stroke="#78350f" stroke-width="3" stroke-linejoin="round" />
+
+    <!-- 字母 G 高光立体描边内衬 -->
+    <path d="
+      M 364 182
+      C 340 152 304 136 260 136
+      C 178 136 120 196 120 270
+      C 120 342 176 404 260 404
+      C 340 404 388 358 388 304
+      C 388 292 387 278 385 262
+      L 273 262
+      L 273 290
+      L 338 290
+      C 330 330 298 354 260 354
+      C 210 354 174 316 174 270
+      C 174 224 210 186 258 186
+      C 284 186 304 196 320 214
+      L 364 182
+      Z
+    " fill="none" stroke="#fffbeb" stroke-width="2.5" opacity="0.65" />
+  </g>
+
+  <!-- 6. G 怀抱中央的闪耀扑克花色徽记（红心宝玉） -->
+  <g transform="translate(254, 252)">
+    <path d="M 0 -12 C 0 -22 -14 -28 -14 -16 C -14 -8 0 4 0 4 C 0 4 14 -8 14 -16 C 14 -28 0 -22 0 -12 Z" fill="url(#heartGrad)" filter="url(#cardShadow)" transform="scale(1.2)" />
+  </g>
+
+  <!-- 7. 右上角竞技与胜利之星（4角星芒 ✨） -->
+  <g transform="translate(398, 114)" filter="url(#goldGlow)">
+    <!-- 星芒外晕 -->
+    <path d="M 0 -24 Q 0 0 -24 0 Q 0 0 0 24 Q 0 0 24 0 Q 0 0 0 -24 Z" fill="#fef08a" opacity="0.9" />
+    <circle cx="0" cy="0" r="5" fill="#ffffff" />
+  </g>
+
+  <!-- 8. 左下角微星 -->
+  <g transform="translate(108, 396)" opacity="0.75">
+    <path d="M 0 -14 Q 0 0 -14 0 Q 0 0 0 14 Q 0 0 14 0 Q 0 0 0 -14 Z" fill="#fbbf24" />
+    <circle cx="0" cy="0" r="3" fill="#ffffff" />
+  </g>
+</svg>

@@ -118,7 +118,7 @@ export function generateShareText({
   const url = `${origin}/?room=${encodeURIComponent(roomId)}`;
 
   const lines = [
-    `🎴 掼蛋邀请：来「${roomName || '家庭游戏室'}」打牌啦！`,
+    `🎴「Gameday - 游戏日」掼蛋邀请：来「${roomName || '家庭游戏室'}」打牌啦！`,
     `🏠 房间号：${roomId}`
   ];
 
