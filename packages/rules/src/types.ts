@@ -29,4 +29,6 @@ export interface Play {
   /** 用于 UI 展示的主点数（顺子/连对/连三取最高牌，其余取主点数）。跨类型比较不要依赖它，见 compare.ts */
   rank: Rank;
   size: number;
+  /** 顺子、木板、钢板等连续牌型的排序键（逢人配百搭合成时直接存入） */
+  orderKey?: number;
 }

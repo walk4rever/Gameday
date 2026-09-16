@@ -1,13 +1,13 @@
 import type { Seat } from '@guandan/engine';
-import type { SeatTrickAction } from '@guandan/protocol';
+import type { PausedInfo, PlayerStatus, SeatTrickAction } from '@guandan/protocol';
 import type { Card, Play, Rank } from '@guandan/rules';
 
 export interface SeatView {
   seat: Seat;
   name: string;
   isBot: boolean;
-  /** 这个座位当前是不是有人在线操作（掉线的座位由机器人临时代打）。 */
   connected: boolean;
+  status: PlayerStatus;
   handCount: number;
 }
 
@@ -25,9 +25,16 @@ export interface UseGameResult {
   canPass: boolean;
   roundOver: boolean;
   finishOrder: Seat[];
+  paused: PausedInfo | null;
+  tribute?: {
+    type: 'none' | 'anti_tribute' | 'single' | 'double';
+    description: string;
+  } | null;
   error: string | null;
   clearError: () => void;
   playSelected: (cards: Card[]) => void;
   pass: () => void;
   restart: () => void;
+  delegateBot: (seat: Seat) => void;
+  dissolve: () => void;
 }

@@ -21,7 +21,12 @@ export default {
       url.protocol = 'https:';
       return Response.redirect(url.toString(), 301);
     }
-    if (url.pathname === '/ws' || url.pathname === '/api/room-status') {
+    if (url.pathname.startsWith('/api/auth/')) {
+      const id = env.ROOM.idFromName('__system_auth__');
+      const stub = env.ROOM.get(id);
+      return stub.fetch(request);
+    }
+    if (url.pathname === '/ws' || url.pathname === '/api/room-status' || url.pathname === '/api/room-reset') {
       const roomName = url.searchParams.get('room') ?? 'default';
       const id = env.ROOM.idFromName(roomName);
       const stub = env.ROOM.get(id);

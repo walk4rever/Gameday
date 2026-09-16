@@ -17,6 +17,7 @@ function bombTier(type: PlayType, size: number): number {
 }
 
 function orderKey(play: Play, level: Rank): number {
+  if (play.orderKey !== undefined) return play.orderKey;
   switch (play.type) {
     case 'straight':
     case 'straightFlush': {

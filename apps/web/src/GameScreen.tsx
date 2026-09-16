@@ -1,3 +1,4 @@
+import { getRankedHintPlays } from '@guandan/bot';
 import type { Seat } from '@guandan/engine';
 import type { SeatTrickAction } from '@guandan/protocol';
 import type { Card, Play } from '@guandan/rules';
@@ -7,11 +8,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   analyzeSelection,
   describePlay,
+  isJoker,
   isRed,
-  playTypeName,
   rankLabel,
   rankOrderTitle,
-  smallestMove,
   sortHand
 } from './cardDisplay.js';
 import type { SeatView, UseGameResult } from './game/types.js';
@@ -21,8 +21,8 @@ import { RulesModal } from './RulesModal.js';
 import { sound } from './sound.js';
 import { useOrientation } from './useOrientation.js';
 
-const FAN_CARD_WIDTH_PX = 66;
-const FAN_LIFT_PX = 24;
+const FAN_CARD_WIDTH_PX = 52;
+const FAN_LIFT_PX = 18;
 
 export interface GameScreenProps {
   game: UseGameResult;
@@ -30,54 +30,89 @@ export interface GameScreenProps {
   onExit?: () => void;
 }
 
-/** 动态半扇形排布：牌多时紧凑收拢，牌少时舒展居中，弧度自然；横屏下更平缓，展示更大触控面。 */
+function getPortraitStepPx(total: number): number {
+  if (total <= 2) return 50;
+  if (total <= 3) return 44;
+  if (total <= 4) return 38;
+  if (total <= 6) return 32;
+  if (total <= 8) return 28;
+  if (total <= 12) return 22;
+  if (total <= 16) return 18;
+  if (total <= 20) return 15;
+  return 12;
+}
+
+function getLandscapeStepPx(total: number): number {
+  if (total <= 2) return 66;
+  if (total <= 3) return 60;
+  if (total <= 4) return 54;
+  if (total <= 6) return 48;
+  if (total <= 8) return 42;
+  if (total <= 12) return 36;
+  if (total <= 16) return 30;
+  if (total <= 20) return 26;
+  return 22;
+}
+
+/** 动态半扇形排布：牌少时向中间聚拢，牌多时自适应容器宽度，最外侧牌绝不出界 */
 function calculateFanStyle(
   index: number,
   total: number,
   selected: boolean,
-  isLandscape: boolean
+  isLandscape: boolean,
+  containerWidth: number
 ): CSSProperties {
-  const cardWidth = isLandscape ? 60 : FAN_CARD_WIDTH_PX;
-  const liftPx = isLandscape ? 20 : FAN_LIFT_PX;
+  const cardWidth = isLandscape ? 50 : FAN_CARD_WIDTH_PX;
+  const liftPx = isLandscape ? 14 : FAN_LIFT_PX;
 
   if (total <= 1) {
     return {
       left: '50%',
       transform: `translateX(-50%) translateY(${selected ? -liftPx : 0}px)`,
-      zIndex: selected ? 200 : 10
+      zIndex: 10
     };
   }
 
-  // 牌数多时控制弧度；横屏下弧度更平缓，手感更开阔
-  const maxSpreadDeg = isLandscape
-    ? total > 16
-      ? 22
-      : total > 8
-        ? 15
-        : 10
-    : total > 16
-      ? 38
-      : total > 8
-        ? 28
-        : 16;
   const steps = total - 1;
+
+  // 预留两侧安全边距（含卡牌旋转向外倾斜产生的位移量，确保最左边的牌角标完全可见）
+  const edgeSafetyMargin = isLandscape ? 36 : 28;
+  const usableWidth = Math.max(160, containerWidth - edgeSafetyMargin);
+  const maxSafeStep = (usableWidth - cardWidth) / steps;
+
+  const preferredStep = isLandscape ? getLandscapeStepPx(total) : getPortraitStepPx(total);
+  const stepPx = Math.min(preferredStep, Math.max(8, maxSafeStep));
+
+  // 以屏幕正中 50% 为锚点，两侧对称向中心聚拢
+  const offsetFromCenter = (index - steps / 2) * stepPx;
+  const leftCalc = `calc(50% - ${cardWidth / 2}px + ${offsetFromCenter}px)`;
+
+  // 弧度控制：随着牌数增多平缓微拱，最外侧牌倾角严格受控，防止左上角切出屏幕
+  const maxSpreadDeg = total <= 2
+    ? 0
+    : total <= 4
+      ? isLandscape ? 4 : 5
+      : isLandscape
+        ? total > 16
+          ? 18
+          : 12
+        : total > 16
+          ? 18
+          : 12;
+
   const anglePerCard = maxSpreadDeg / steps;
   const angle = (index - steps / 2) * anglePerCard;
 
-  // 边距与卡牌跨度自适应
-  const edgeInsetPx = isLandscape ? 28 : 16;
-  const span = `(100% - ${cardWidth}px - ${2 * edgeInsetPx}px)`;
-  const leftCalc = `calc(${edgeInsetPx}px + ${index} * ${span} / ${steps})`;
-
   const lift = selected ? liftPx : 0;
-  // 边缘的牌稍往下落，中间微拱起
-  const archFactor = isLandscape ? 4 : 8;
+  // 边缘的牌稍往下落，中间微拱起；牌少时不需要多余起拱，保持平整易点
+  const archFactor = total <= 3 ? 0 : total <= 6 ? 2 : isLandscape ? 3 : 6;
   const archOffset = Math.sin((index / steps) * Math.PI) * archFactor;
 
   return {
     left: leftCalc,
     transform: `rotate(${angle}deg) translateY(-${lift + archOffset}px)`,
-    zIndex: selected ? 200 + index : index + 10
+    // 保持手牌自然的从左往右叠放层级，浮出时不要跨层盖到右边邻牌的左上角数字与花色
+    zIndex: index + 10
   };
 }
 
@@ -88,6 +123,7 @@ function seatAt(seats: SeatView[], seat: Seat): SeatView {
       name: `座位 ${seat}`,
       isBot: true,
       connected: false,
+      status: 'online',
       handCount: 0
     }
   );
@@ -97,13 +133,45 @@ function trickFor(currentTrick: SeatTrickAction[], seat: Seat): SeatTrickAction 
   return currentTrick.find((a) => a.seat === seat);
 }
 
-/** 桌面打出的小扑克牌 */
+/** 动态计算牌桌打出牌的重叠间距，牌少时完全不重叠，牌多时依然留出足够宽的左侧角标可见区域 */
+function getTrickCardMarginLeft(idx: number, total: number, isLandscape: boolean): number {
+  if (idx === 0) return 0;
+  // 1-2张牌：完全无重叠，清晰平铺
+  if (total <= 2) return isLandscape ? 4 : 3;
+  // 3张牌：微贴并排
+  if (total <= 3) return isLandscape ? 2 : 1;
+  // 4张牌：炸弹等，微叠，留出20px以上可见角标
+  if (total <= 4) return isLandscape ? -7 : -8;
+  // 5张牌（顺子/同花顺/三带二）：留出18px以上可见角标
+  if (total <= 5) return isLandscape ? -9 : -10;
+  // 6张牌（钢板/木板连对）：留出16px以上可见角标
+  if (total <= 6) return isLandscape ? -10 : -11;
+  // 7张以上（大型炸弹）：留出15px以上可见角标
+  return isLandscape ? -11 : -12;
+}
+
+/** 桌面打出的小扑克牌：左上角对齐角标，牌多叠放时依然一目了然 */
 function TableMiniCard({ card }: { card: Card }) {
   const red = isRed(card);
+  const joker = isJoker(card);
   return (
     <div className={`table-mini-card ${red ? 'card-red' : 'card-black'}`}>
-      <span className="mini-rank">{rankLabel(card)}</span>
-      <SuitIcon suit={card.suit} className="mini-suit-icon" />
+      {joker ? (
+        <div className="mini-joker-col">
+          <span>{card.rank === 'big_joker' ? '大' : '小'}</span>
+          <span>王</span>
+        </div>
+      ) : (
+        <>
+          <div className="mini-corner">
+            <span className="mini-rank">{rankLabel(card)}</span>
+            <SuitIcon suit={card.suit} className="mini-suit-icon" />
+          </div>
+          <div className="mini-card-center-suit">
+            <SuitIcon suit={card.suit} className="mini-center-suit-icon" />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -111,10 +179,12 @@ function TableMiniCard({ card }: { card: Card }) {
 /** 牌桌上各家打出的牌区 */
 function TrickDisplay({
   action,
-  isWinning
+  isWinning,
+  isLandscape
 }: {
   action: SeatTrickAction | undefined;
   isWinning?: boolean;
+  isLandscape?: boolean;
 }) {
   if (!action) return <div className="trick-slot empty" />;
 
@@ -128,6 +198,7 @@ function TrickDisplay({
 
   const play = classifyPlay(action.cards);
   const typeText = play ? describePlay(play) : `${action.cards.length} 张`;
+  const count = action.cards.length;
 
   return (
     <div className={`trick-slot has-cards ${isWinning ? 'trick-winning' : ''}`}>
@@ -140,7 +211,10 @@ function TrickDisplay({
           <div
             key={card.id}
             className="trick-card-wrapper"
-            style={{ marginLeft: idx === 0 ? 0 : '-18px', zIndex: idx }}
+            style={{
+              marginLeft: getTrickCardMarginLeft(idx, count, Boolean(isLandscape)),
+              zIndex: idx + 1
+            }}
           >
             <TableMiniCard card={card} />
           </div>
@@ -159,11 +233,12 @@ function SeatCard({
 }: {
   seat: SeatView;
   active: boolean;
-  role: 'partner' | 'rival';
+  role: 'partner' | 'rival' | 'self';
   finishedRank?: number | undefined;
 }) {
   const isPartner = role === 'partner';
-  const roleText = isPartner ? '搭档' : '对手';
+  const isSelf = role === 'self';
+  const roleText = isSelf ? '我' : isPartner ? '搭档' : '对手';
   const count = seat.handCount;
   const isFinished = count === 0;
 
@@ -178,9 +253,25 @@ function SeatCard({
       }`}
     >
       <div className="seat-avatar-wrap">
-        <div className="seat-avatar">
+        <div
+          className={`seat-avatar ${
+            !seat.isBot && seat.status === 'offline'
+              ? 'avatar-offline'
+              : !seat.isBot && seat.status === 'left'
+                ? 'avatar-left'
+                : ''
+          }`}
+        >
           {seat.isBot ? '🤖' : '👤'}
-          {seat.connected && !seat.isBot && <span className="seat-online-dot" />}
+          {!seat.isBot && seat.status === 'offline' && (
+            <span className="seat-offline-dot" title="掉线中" />
+          )}
+          {!seat.isBot && seat.status === 'left' && (
+            <span className="seat-left-dot" title="已退出" />
+          )}
+          {!seat.isBot && seat.status === 'online' && seat.connected && (
+            <span className="seat-online-dot" title="在线" />
+          )}
         </div>
         {active && <span className="thinking-beacon" title="行动中" />}
       </div>
@@ -188,17 +279,30 @@ function SeatCard({
       <div className="seat-main-info">
         <div className="seat-top-row">
           <span className="seat-display-name">{seat.name}</span>
-          <span className={`seat-role-pill ${isPartner ? 'pill-partner' : 'pill-rival'}`}>
+          {!seat.isBot && seat.status === 'offline' && (
+            <span className="seat-status-pill pill-offline">🔴 掉线</span>
+          )}
+          {!seat.isBot && seat.status === 'left' && (
+            <span className="seat-status-pill pill-left">🚪 离开</span>
+          )}
+          <span
+            className={`seat-role-pill ${
+              isSelf ? 'pill-self' : isPartner ? 'pill-partner' : 'pill-rival'
+            }`}
+          >
             {roleText}
           </span>
         </div>
 
         {/* 剩余牌数及报牌警告 */}
         <div className="seat-status-row">
-          {isFinished ? (
+          {finishedRank !== undefined ? (
             <span className="seat-finished-badge">
-              {finishedRank !== undefined ? rankOrderTitle(finishedRank).badge : '已出完'}
+              {rankOrderTitle(finishedRank).badge}
+              {count > 0 ? ` (剩${count}张)` : ''}
             </span>
+          ) : isFinished ? (
+            <span className="seat-finished-badge">已出完</span>
           ) : (
             <span
               className={`seat-count-badge ${isUrgent ? 'count-urgent' : isWarning ? 'count-warning' : ''}`}
@@ -234,12 +338,51 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => sound.isEnabled());
 
+  // 容器宽度动态感知，严密防止最左边与最右边的牌在不同手机视口上被裁切
+  const fanAreaRef = useRef<HTMLDivElement>(null);
+  const [fanWidth, setFanWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth - 16 : 360
+  );
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (fanAreaRef.current) {
+        const w = fanAreaRef.current.clientWidth;
+        if (w > 0) {
+          setFanWidth(w);
+          return;
+        }
+      }
+      setFanWidth(window.innerWidth - 16);
+    };
+
+    updateWidth();
+
+    const el = fanAreaRef.current;
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && el) {
+      observer = new ResizeObserver(() => {
+        updateWidth();
+      });
+      observer.observe(el);
+    }
+
+    window.addEventListener('resize', updateWidth);
+    window.addEventListener('orientationchange', updateWidth);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', updateWidth);
+      window.removeEventListener('orientationchange', updateWidth);
+    };
+  }, []);
+
   // 滑动多选（滑动触控/拖拽连选）
   const [isDragging, setIsDragging] = useState(false);
   const dragVisitedIdsRef = useRef<Set<string>>(new Set());
 
-  // 音效与触感监控
-  const prevTurnRef = useRef(currentTurn);
+  // 音效与触感监控（轮到自己出牌时即刻播放提示音与触感）
+  const prevTurnRef = useRef<Seat | null>(null);
   useEffect(() => {
     if (prevTurnRef.current !== currentTurn) {
       if (isHumanTurn && !roundOver) {
@@ -269,18 +412,40 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
     [hand, selectedIds]
   );
 
-  // 提示牌
-  const hint = useMemo(
-    () => (legalMoves.length > 0 ? smallestMove(legalMoves, level) : null),
-    [legalMoves, level]
-  );
-  const hintIds = useMemo(() => new Set(hint?.cards.map((c) => c.id) ?? []), [hint]);
-
-  // 上家需压制的牌
+  // 上家需压制的牌（传入 level，正确识别逢人配百搭）
   const opponentLastPlay: Play | null = useMemo(() => {
     if (!lastPlay || lastPlay.seat === humanSeat) return null;
-    return classifyPlay(lastPlay.cards);
-  }, [lastPlay, humanSeat]);
+    return classifyPlay(lastPlay.cards, level);
+  }, [lastPlay, humanSeat, level]);
+
+  const isLastPlayFromPartner = useMemo(() => {
+    if (!lastPlay) return false;
+    return lastPlay.seat === topSeat;
+  }, [lastPlay, topSeat]);
+
+  const partnerHandSize = useMemo(() => {
+    const s = seats.find((item) => item.seat === topSeat);
+    return s ? s.handCount : Infinity;
+  }, [seats, topSeat]);
+
+  // 启发式智能提示推荐列表（按综合战术价值由优至劣排序，去重保护炸弹）
+  const hintOptions: Play[] = useMemo(() => {
+    if (!isHumanTurn || roundOver) return [];
+    return getRankedHintPlays({
+      hand: game.hand,
+      lastPlay: opponentLastPlay,
+      level,
+      isLastPlayFromPartner,
+      partnerHandSize
+    });
+  }, [isHumanTurn, roundOver, game.hand, opponentLastPlay, level, isLastPlayFromPartner, partnerHandSize]);
+
+  const [hintIndex, setHintIndex] = useState(0);
+
+  // 轮次变化、上家出牌变化或对局结束时重置提示轮换索引
+  useEffect(() => {
+    setHintIndex(0);
+  }, [currentTurn, opponentLastPlay, roundOver]);
 
   // 实时出牌智能分析（裁判+教练指导）
   const selectionAnalysis = useMemo(
@@ -353,8 +518,10 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   };
 
   const handleHint = () => {
-    if (!hint) return;
-    setSelectedIds(hintIds);
+    if (hintOptions.length === 0) return;
+    const currentOption = hintOptions[hintIndex % hintOptions.length]!;
+    setSelectedIds(new Set(currentOption.cards.map((c) => c.id)));
+    setHintIndex((prev) => (prev + 1) % hintOptions.length);
     sound.cardSelect();
     sound.haptic('selection');
     game.clearError();
@@ -425,9 +592,25 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         </div>
       </div>
 
+      {/* 进贡 / 抗贡事件广播横幅 */}
+      {game.tribute && game.tribute.type !== 'none' && !roundOver && (
+        <div className={`tribute-broadcast-banner tribute-${game.tribute.type}`}>
+          <span className="tribute-icon">
+            {game.tribute.type === 'anti_tribute' ? '🛡️' : '👑'}
+          </span>
+          <span className="tribute-desc">{game.tribute.description}</span>
+        </div>
+      )}
+
       {/* 牌桌核心交互区（椭圆毛毡拟真台面） */}
       <div className="felt-table-wrapper" onClick={handleClearSelection}>
-        <div className="felt-table-surface" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="felt-table-surface"
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest('button, .card, .seat-card, a')) return;
+            handleClearSelection();
+          }}
+        >
           {/* 台面中央暗纹 */}
           <div className="felt-center-watermark">
             <span className="felt-watermark-text">GUANDAN</span>
@@ -445,6 +628,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             <TrickDisplay
               action={trickFor(currentTrick, topSeat)}
               isWinning={lastPlay?.seat === topSeat}
+              isLandscape={isLandscape}
             />
           </div>
 
@@ -459,6 +643,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             <TrickDisplay
               action={trickFor(currentTrick, leftSeat)}
               isWinning={lastPlay?.seat === leftSeat}
+              isLandscape={isLandscape}
             />
           </div>
 
@@ -473,71 +658,88 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             <TrickDisplay
               action={trickFor(currentTrick, rightSeat)}
               isWinning={lastPlay?.seat === rightSeat}
+              isLandscape={isLandscape}
             />
           </div>
 
-          {/* 南：我打出的牌区 */}
+          {/* 南：我（自己）席位与打出的牌区 */}
           <div className="table-zone zone-self">
             <TrickDisplay
               action={trickFor(currentTrick, humanSeat)}
               isWinning={lastPlay?.seat === humanSeat}
+              isLandscape={isLandscape}
+            />
+            <SeatCard
+              seat={seatAt(seats, humanSeat)}
+              active={isHumanTurn && !roundOver}
+              role="self"
+              finishedRank={finishOrder.includes(humanSeat) ? finishOrder.indexOf(humanSeat) : undefined}
             />
           </div>
         </div>
       </div>
 
-      {/* 实时出牌裁判与智能指导条 */}
-      <div className="play-coach-bar">
-        {selectedCards.length > 0 ? (
-          <div className={`coach-pill ${selectionAnalysis.valid ? 'pill-valid' : 'pill-invalid'}`}>
-            <span className="coach-icon">{selectionAnalysis.valid ? '✓' : '⚠️'}</span>
-            <span className="coach-name">{selectionAnalysis.name || '选牌分析'}</span>
-            <span className="coach-detail">{selectionAnalysis.detail}</span>
-            <button
-              className="coach-clear-btn"
-              onClick={handleClearSelection}
-              title="清空当前已选牌"
-            >
-              清空
-            </button>
-          </div>
-        ) : (
-          <div className={`coach-pill ${isHumanTurn ? 'pill-turn' : 'pill-wait'}`}>
-            <span className="coach-icon">{isHumanTurn ? '👉' : '⏳'}</span>
-            <span className="coach-detail">
-              {roundOver
-                ? '对局已结束'
-                : isHumanTurn
-                  ? opponentLastPlay
-                    ? `上家出了 ${playTypeName(opponentLastPlay.type, opponentLastPlay.size)}，请选牌压制或跳过`
-                    : '轮到你首出，请选择任意合法牌型领出'
-                  : currentTurn === humanSeat
-                    ? '轮到你出牌'
-                    : `等待 ${seatName(currentTurn)} 出牌中…`}
+      {/* 玩家掉线或主动退出时的对局暂停与等待决策横幅 */}
+      {game.paused && (
+        <div className="paused-waiting-banner">
+          <div className="paused-badge-row">
+            <span className="paused-pulse-dot" />
+            <span className="paused-title">
+              {game.paused.reason === 'offline'
+                ? `⏸️ 牌局暂停：玩家【${game.paused.name}】掉线中`
+                : `⏸️ 牌局暂停：玩家【${game.paused.name}】已退出游戏`}
             </span>
           </div>
-        )}
-      </div>
+          <p className="paused-desc">
+            {game.paused.reason === 'offline'
+              ? '系统已暂停当前出牌，正在等待其重新联网进入（未托管给机器人）'
+              : '该玩家已离开牌局，牌局暂停中（未托管给机器人）'}
+          </p>
+          <div className="paused-actions">
+            <button
+              type="button"
+              className="secondary-action-btn paused-action-btn"
+              onClick={() => game.delegateBot(game.paused!.seat)}
+              title="同桌玩家可协商授权由AI替补代打"
+            >
+              🤖 授权AI接管替打
+            </button>
+            <button
+              type="button"
+              className="secondary-action-btn paused-action-btn btn-dissolve"
+              onClick={() => game.dissolve()}
+              title="协商解散本局，重回大厅"
+            >
+              🚪 解散本局回大厅
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 错误提示 */}
       {game.error && <div className="game-error-toast">{game.error}</div>}
 
       {/* 玩家手牌扇形展示区 */}
-      <div className="hand-fan-area">
+      <div
+        ref={fanAreaRef}
+        className={`hand-fan-area ${isHumanTurn && !roundOver ? 'hand-my-turn' : ''}`}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('.card, button')) return;
+          handleClearSelection();
+        }}
+      >
         <div className="hand-fan-container">
           {hand.map((card, index) => {
             const selected = selectedIds.has(card.id);
-            const hinted = hintIds.has(card.id);
             return (
               <PlayingCard
                 key={card.id}
                 card={card}
                 level={level}
                 selected={selected}
-                hinted={hinted}
                 disabled={!isHumanTurn || roundOver}
                 onPointerDown={() => handlePointerDown(card.id)}
-                style={calculateFanStyle(index, hand.length, selected, isLandscape)}
+                style={calculateFanStyle(index, hand.length, selected, isLandscape, fanWidth)}
               />
             );
           })}
@@ -545,7 +747,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
       </div>
 
       {/* 底部操作按钮栏 */}
-      <div className="game-action-controls">
+      <div className={`game-action-controls ${isHumanTurn && !roundOver ? 'controls-my-turn' : ''}`}>
         <button
           type="button"
           className="btn-pass"
@@ -560,9 +762,9 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           type="button"
           className="btn-hint"
           onClick={handleHint}
-          disabled={!isHumanTurn || roundOver || !hint}
+          disabled={!isHumanTurn || roundOver || hintOptions.length === 0}
         >
-          💡 提示
+          💡 提示{hintOptions.length > 1 ? ` (${(hintIndex % hintOptions.length) + 1}/${hintOptions.length})` : ''}
         </button>
 
         <button
@@ -570,8 +772,13 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           className={`btn-play ${selectionAnalysis.valid && selectedCards.length > 0 ? 'pulse-ready' : ''}`}
           onClick={handlePlay}
           disabled={!isHumanTurn || roundOver || !selectionAnalysis.valid}
+          title={selectedCards.length > 0 ? selectionAnalysis.detail : undefined}
         >
-          {selectedCards.length > 0 ? `出牌 (${selectedCards.length})` : '出牌'}
+          {selectedCards.length > 0
+            ? selectionAnalysis.valid
+              ? `出牌 (${selectedCards.length})`
+              : '无法出牌'
+            : '出牌'}
         </button>
       </div>
 
@@ -594,7 +801,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           <div className="exit-confirm-modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="exit-modal-title">🚪 确定退出当前牌桌？</h3>
             <p className="exit-modal-desc">
-              对局正在进行中。退出后将返回房间大厅，您的席位将由 AI 机器人替补代打，其他玩家可继续对战。
+              对局正在进行中。退出后将返回房间大厅，其他玩家将看到您的退出状态并可选择暂停等待或解散，系统不会托管给机器人。
             </p>
             <div className="exit-modal-actions">
               <button

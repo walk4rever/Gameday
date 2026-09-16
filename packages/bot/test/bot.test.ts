@@ -1,7 +1,7 @@
 import { classifyPlay } from '@guandan/rules';
 import type { Card, Play, Rank, Suit } from '@guandan/rules';
 import { describe, expect, it } from 'vitest';
-import { chooseBotPlay } from '../src/index.js';
+import { chooseBotPlay, getRankedHintPlays } from '../src/index.js';
 
 let counter = 0;
 function card(suit: Suit, rank: Rank): Card {
@@ -183,5 +183,68 @@ describe('chooseBotPlay：跟牌', () => {
       partnerHandSize: 1
     });
     expect(move).toBeNull();
+  });
+});
+
+describe('getRankedHintPlays：智能提示推荐与循环轮换', () => {
+  it('首出时组合套牌优先于单张，炸弹排在最后，且同一构型去重', () => {
+    const hand = [
+      card('spade', '3'),
+      card('heart', '4'),
+      card('club', '5'),
+      card('diamond', '6'),
+      card('spade', '7'),
+      card('heart', '8'),
+      card('club', '8'),
+      card('spade', 'K'),
+      card('heart', 'K'),
+      card('club', 'K'),
+      card('diamond', 'K') // 炸弹 K
+    ];
+    const hints = getRankedHintPlays({
+      hand,
+      lastPlay: null,
+      level,
+      isLastPlayFromPartner: false,
+      partnerHandSize: 27
+    });
+
+    expect(hints.length).toBeGreaterThan(1);
+    // 第一优先推荐顺子 3-4-5-6-7
+    expect(hints[0]?.type).toBe('straight');
+    // 第二优先推荐对子 88
+    const pair8 = hints.find((h) => h.type === 'pair' && h.rank === '8');
+    expect(pair8).toBeDefined();
+    // 炸弹 K 排在常规牌型之后，绝对不拆炸弹成对K或三张K作为靠前提示
+    const bombIndex = hints.findIndex((h) => h.type === 'bomb' && h.rank === 'K');
+    const straightIndex = hints.findIndex((h) => h.type === 'straight');
+    expect(straightIndex).toBeLessThan(bombIndex);
+
+    // 检查去重：同一类型的牌型不会重复出现完全相同的 rank 和点数组合
+    const keys = hints.map((h) => `${h.type}-${h.rank}-${h.size}`);
+    const uniqueKeys = new Set(keys);
+    expect(keys.length).toBe(uniqueKeys.size);
+  });
+
+  it('保护逢人配，不优先把红桃级牌当作散牌单张提示', () => {
+    const hand = [
+      card('heart', '2'), // 逢人配
+      card('spade', '3'),
+      card('club', '9')
+    ];
+    const hints = getRankedHintPlays({
+      hand,
+      lastPlay: null,
+      level: '2',
+      isLastPlayFromPartner: false,
+      partnerHandSize: 27
+    });
+
+    // 散单 3 和 9 应该排在逢人配单张之前
+    const ranks = hints.slice(0, 2).map((h) => h.rank);
+    expect(ranks).toContain('3');
+    expect(ranks).toContain('9');
+    // 逢人配作为单张应当排在最后
+    expect(hints[hints.length - 1]?.cards[0]?.suit).toBe('heart');
   });
 });

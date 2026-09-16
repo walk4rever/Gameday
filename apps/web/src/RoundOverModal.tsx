@@ -37,6 +37,11 @@ export function RoundOverModal({ finishOrder, humanSeat, seats, onRestart }: Rou
               {result.levelBonus > 0 ? `升级 +${result.levelBonus} 级` : `落后 ${Math.abs(result.levelBonus)} 级`}
             </div>
           )}
+          {result.tributeInfo && (
+            <div className="round-tribute-hint">
+              <span>👑 {result.tributeInfo}</span>
+            </div>
+          )}
         </div>
 
         <div className="podium-list">
@@ -44,6 +49,8 @@ export function RoundOverModal({ finishOrder, humanSeat, seats, onRestart }: Rou
             const info = seatInfo(seat);
             const rank = rankOrderTitle(index);
             const isOurTeam = info.isSelf || info.isPartner;
+            const seatObj = seats.find((s) => s.seat === seat);
+            const handCount = seatObj?.handCount ?? 0;
 
             return (
               <div
@@ -61,6 +68,9 @@ export function RoundOverModal({ finishOrder, humanSeat, seats, onRestart }: Rou
                     {info.relation}
                     {info.isBot ? ' 🤖' : ''}
                   </span>
+                  {handCount > 0 && (
+                    <span className="podium-hand-count">剩 {handCount} 张</span>
+                  )}
                 </div>
               </div>
             );

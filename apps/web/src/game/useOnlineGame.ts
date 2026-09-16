@@ -1,6 +1,12 @@
 import { classifyPlay, getLegalPlays } from '@guandan/rules';
 import type { Seat } from '@guandan/engine';
-import type { ClientMessage, LobbyMessage, LobbySeatSnapshot, ServerMessage, StateMessage } from '@guandan/protocol';
+import type {
+  ClientMessage,
+  LobbyMessage,
+  LobbySeatSnapshot,
+  ServerMessage,
+  StateMessage
+} from '@guandan/protocol';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getOrCreatePlayerId } from './playerId.js';
 import type { UseGameResult } from './types.js';
@@ -31,6 +37,7 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
   useEffect(() => {
     let unmounted = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
     userLeftRef.current = false;
 
     function connect() {
@@ -46,9 +53,18 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
       ws.addEventListener('open', () => {
         if (unmounted) return;
         setStatus('open');
+
+        // 启动 5 秒心跳保活检测机制
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 5000);
       });
 
       ws.addEventListener('close', (e) => {
+        if (pingInterval) clearInterval(pingInterval);
         if (unmounted) return;
         setStatus('closed');
         // 如果用户已主动退出或正常结束，不自动重连
@@ -68,6 +84,10 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
         if (unmounted) return;
         try {
           const data = JSON.parse(event.data as string) as ServerMessage;
+          if (data.type === 'pong') {
+            // 心跳响应，忽略
+            return;
+          }
           if (data.type === 'error') {
             setError(data.message);
           } else {
@@ -82,8 +102,18 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
 
     connect();
 
+    // 浏览器网络状态变化即时监听
+    const handleOnline = () => {
+      if (status !== 'open' && !userLeftRef.current) {
+        connect();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+
     return () => {
       unmounted = true;
+      window.removeEventListener('online', handleOnline);
+      if (pingInterval) clearInterval(pingInterval);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (wsRef.current) {
         wsRef.current.close();
@@ -112,6 +142,17 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
     setStatus('closed');
   }, []);
 
+  const delegateBot = useCallback(
+    (seat: Seat) => {
+      send({ type: 'delegate_bot', seat });
+    },
+    [send]
+  );
+
+  const dissolve = useCallback(() => {
+    send({ type: 'dissolve' });
+  }, [send]);
+
   const game = useMemo<UseGameResult | null>(() => {
     if (!message || message.type !== 'state') return null;
     const state: StateMessage = message;
@@ -119,7 +160,7 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
     const humanSeat = state.you.seat;
     const isHumanTurn = !state.roundOver && state.currentTurn === humanSeat;
     const opponentLastPlay =
-      state.lastPlay && state.lastPlay.seat !== humanSeat ? classifyPlay(state.lastPlay.cards) : null;
+      state.lastPlay && state.lastPlay.seat !== humanSeat ? classifyPlay(state.lastPlay.cards, state.level) : null;
     const legalMoves = isHumanTurn ? getLegalPlays(state.you.hand, opponentLastPlay, state.level) : [];
     const canPass = isHumanTurn && state.lastPlay !== null && state.lastPlay.seat !== humanSeat;
 
@@ -135,18 +176,37 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
       isHumanTurn,
       canPass,
       roundOver: state.roundOver,
-      finishOrder: state.finished,
+      finishOrder: (() => {
+        let order = state.finished;
+        if (state.roundOver && order.length < 4) {
+          const allSeats: Seat[] = [0, 1, 2, 3];
+          const remaining = allSeats.filter((s) => !order.includes(s));
+          remaining.sort((a, b) => {
+            const countA = state.seats.find((s) => s.seat === a)?.handCount ?? 0;
+            const countB = state.seats.find((s) => s.seat === b)?.handCount ?? 0;
+            return countA - countB;
+          });
+          order = [...order, ...remaining];
+        }
+        return order;
+      })(),
+      paused: state.paused ?? null,
+      tribute: state.tribute ?? null,
       error,
       clearError: () => setError(null),
       playSelected: (cards) => send({ type: 'play', cardIds: cards.map((c) => c.id) }),
       pass: () => send({ type: 'pass' }),
-      restart: () => send({ type: 'restart' })
+      restart: () => send({ type: 'restart' }),
+      delegateBot,
+      dissolve
     };
-  }, [message, error, send]);
+  }, [message, error, send, delegateBot, dissolve]);
 
   const view: OnlinePhase = useMemo(() => {
     if (game) return { phase: 'playing', game };
-    if (message?.type === 'lobby') return { phase: 'lobby', you: message.you, seats: message.seats, start, error };
+    if (message?.type === 'lobby') {
+      return { phase: 'lobby', you: message.you, seats: message.seats, start, error };
+    }
     return { phase: 'connecting' };
   }, [game, message, start, error]);
 

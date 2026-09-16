@@ -41,7 +41,7 @@ export function playCards(state: GameState, seat: Seat, cards: Card[]): ActionRe
     return { ok: false, error: '出的牌不在手上' };
   }
 
-  const play = classifyPlay(cards);
+  const play = classifyPlay(cards, state.level);
   if (!play) return { ok: false, error: '不是合法牌型' };
 
   if (state.lastPlay !== null) {
@@ -86,8 +86,11 @@ export function passTurn(state: GameState, seat: Seat): ActionResult {
 
   if (everyoneElsePassed) {
     const lastPlaySeat = state.lastPlay.seat;
+    const partnerSeat = ((lastPlaySeat + 2) % 4) as Seat;
     const leadSeat = state.finished.includes(lastPlaySeat)
-      ? nextActiveSeat(lastPlaySeat, state.finished)
+      ? (!state.finished.includes(partnerSeat)
+          ? partnerSeat
+          : nextActiveSeat(lastPlaySeat, state.finished))
       : lastPlaySeat;
 
     return {

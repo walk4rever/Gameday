@@ -7,6 +7,7 @@ export interface TableSeatInfo {
   name: string;
   isBot: boolean;
   connected: boolean;
+  status?: 'online' | 'offline' | 'left';
 }
 
 export interface TableInfo {
@@ -195,8 +196,15 @@ export function RoomTablesScreen({
               return (
                 <div key={seatIdx} className={`mini-seat-item ${hasHuman ? 'seat-occupied' : 'seat-vacant'}`}>
                   <span className="mini-seat-avatar">{hasHuman ? '👤' : '🤖'}</span>
-                  <span className="mini-seat-name">{seatData?.name ?? `座位 ${seatIdx + 1}`}</span>
-                  {hasHuman && seatData?.connected && <span className="mini-seat-dot" />}
+                  {hasHuman && (
+                    seatData?.status === 'offline' ? (
+                      <span className="mini-seat-dot dot-offline" title="掉线中" />
+                    ) : seatData?.status === 'left' ? (
+                      <span className="mini-seat-dot dot-left" title="已离开" />
+                    ) : seatData?.connected ? (
+                      <span className="mini-seat-dot" title="在线" />
+                    ) : null
+                  )}
                 </div>
               );
             })}

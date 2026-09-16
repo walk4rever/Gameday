@@ -10,4 +10,13 @@ export { createDeck, compareValue, shapeIndex, SHAPE_RANKS } from './deck.js';
 export { classifyPlay } from './classify.js';
 export { comparePlays } from './compare.js';
 export { getLegalPlays } from './legalPlays.js';
+export { isWildcard } from './shape.js';
+export {
+  resolveTribute,
+  findTributeCard,
+  findReturnCard,
+  getTributeCardValue,
+  formatCardName
+} from './tribute.js';
+export type { TributeExchange, TributeResult } from './tribute.js';
 export type { Card, Play, PlayType, Rank, Suit } from './types.js';

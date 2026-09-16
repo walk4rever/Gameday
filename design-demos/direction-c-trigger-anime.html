@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gameday · 方向C · 霓虹爆框 TRIGGER ANIME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&family=Archivo+Black&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --ink:#181018;        /* 墨黑底（暖调近黑，非 GitHub 蓝黑） */
+  --ink2:#241722;       /* 面板墨 */
+  --magenta:#FF2E7E;    /* 爆品红 */
+  --cyan:#00E5FF;       /* 电光青 */
+  --yellow:#FFD400;     /* 闪光黄 */
+  --cream:#FFF6E5;      /* 牌面奶油 */
+  --orange:#FF6B1A;     /* 橙焰 */
+  --red:#E0314B;        /* 红花色红（牌面上对比合格） */
+  --line:3px solid var(--ink);
+  --disp:'ZCOOL QingKe HuangYou','Noto Sans SC',sans-serif;
+  --west:'Archivo Black','Noto Sans SC',sans-serif;
+  --body:'Noto Sans SC',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{background:#0d0a0d;}
+body{
+  width:1440px;margin:0 auto;background:var(--ink);
+  font-family:var(--body);color:var(--cream);
+  -webkit-font-smoothing:antialiased;
+}
+/* 网点纸质感（halftone） */
+.halftone{
+  background-image:radial-gradient(circle,rgba(255,246,229,.14) 1.6px,transparent 1.7px);
+  background-size:14px 14px;
+}
+.halftone-m{
+  background-image:radial-gradient(circle,rgba(255,46,126,.28) 1.8px,transparent 1.9px);
+  background-size:12px 12px;
+}
+/* 速度线（横向细密斜线） */
+.speedlines{
+  background-image:repeating-linear-gradient(105deg,transparent 0 26px,rgba(255,246,229,.10) 26px 28px);
+}
+/* 漫画粗描边标题字（paint-order 描边法） */
+.inktitle{
+  font-family:var(--disp);
+  -webkit-text-stroke:2.5px var(--ink);
+  paint-order:stroke fill;
+}
+/* 漫画拟声爆框（锯齿星爆） */
+.burst{
+  clip-path:polygon(50% 0%,61% 12%,76% 5%,79% 20%,95% 17%,91% 32%,100% 41%,90% 50%,100% 59%,91% 68%,95% 83%,79% 80%,76% 95%,61% 88%,50% 100%,39% 88%,24% 95%,21% 80%,5% 83%,9% 68%,0% 59%,10% 50%,0% 41%,9% 32%,5% 17%,21% 20%,24% 5%,39% 12%);
+}
+/* ============ 页面骨架：漫画分页 ============ */
+.page{
+  border:5px solid var(--ink);
+  outline:2px solid rgba(255,246,229,.25);
+  margin:34px 28px;position:relative;
+  background:var(--ink2);
+}
+/* 板块题字条：斜切漫画标题格 */
+.paneltag{
+  display:inline-block;position:relative;z-index:5;
+  font-family:var(--disp);font-size:30px;letter-spacing:2px;
+  color:var(--ink);background:var(--yellow);
+  padding:8px 30px 8px 20px;
+  transform:skewX(-12deg);
+  border:var(--line);box-shadow:6px 6px 0 var(--magenta);
+}
+.paneltag span{display:inline-block;transform:skewX(12deg);}
+.paneltag.cyan{background:var(--cyan);box-shadow:6px 6px 0 var(--yellow);}
+.paneltag.magenta{background:var(--magenta);color:var(--cream);box-shadow:6px 6px 0 var(--cyan);-webkit-text-stroke:0;}
+</style>
+<style>
+/* ============ §1 头版 ============ */
+.hero-head{overflow:hidden;}
+.hero-head .bg-action{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 72% 30%,rgba(255,46,126,.34) 1.8px,transparent 2px) 0 0/16px 16px,
+    repeating-conic-gradient(from -8deg at 78% 42%,rgba(255,212,0,.16) 0deg 4deg,transparent 4deg 14deg),
+    var(--ink2);
+}
+.hero-inner{position:relative;padding:70px 64px 64px;display:flex;gap:48px;align-items:flex-start;}
+.kicker{
+  font-family:var(--west);font-size:15px;letter-spacing:6px;color:var(--cyan);
+  border:2px solid var(--cyan);display:inline-block;padding:5px 14px;margin-bottom:22px;
+  transform:rotate(-2deg);background:var(--ink);
+}
+.hero-title{
+  font-family:var(--disp);font-size:96px;line-height:.98;letter-spacing:2px;
+  color:var(--yellow);
+  text-shadow:5px 5px 0 var(--magenta),10px 10px 0 var(--ink);
+  transform:rotate(-2deg);
+}
+.hero-title .alt{color:var(--magenta);text-shadow:5px 5px 0 var(--cyan),10px 10px 0 var(--ink);}
+.hero-sub{
+  margin-top:26px;font-size:19px;font-weight:700;line-height:1.7;max-width:640px;
+  color:var(--cream);
+}
+.hero-sub b{color:var(--yellow);}
+.hero-onom{
+  position:absolute;right:70px;top:56px;width:230px;height:230px;
+  background:var(--magenta);border:var(--line);
+  display:flex;align-items:center;justify-content:center;
+  transform:rotate(8deg);box-shadow:8px 8px 0 rgba(0,0,0,.55);
+}
+.hero-onom .in{
+  font-family:var(--disp);font-size:58px;color:var(--cream);
+  -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;
+  transform:rotate(-6deg);letter-spacing:2px;
+}
+/* 色板条 */
+.swatches{display:flex;gap:0;margin-top:40px;border:var(--line);box-shadow:8px 8px 0 var(--magenta);width:max-content;}
+.sw{width:132px;padding:14px 12px 12px;border-right:var(--line);}
+.sw:last-child{border-right:none;}
+.sw .chip{height:38px;border:2px solid var(--ink);margin-bottom:8px;}
+.sw .nm{font-family:var(--disp);font-size:15px;letter-spacing:1px;}
+.sw .hx{font-family:var(--west);font-size:12px;letter-spacing:1px;opacity:.85;margin-top:2px;}
+/* 字体组合说明 */
+.fontnotes{margin-top:30px;display:flex;gap:18px;flex-wrap:wrap;}
+.fontnote{
+  border:var(--line);background:var(--ink);padding:12px 18px;max-width:330px;
+  box-shadow:5px 5px 0 var(--cyan);font-size:14px;line-height:1.6;
+}
+.fontnote .f1{font-family:var(--disp);font-size:24px;color:var(--yellow);display:block;}
+.fontnote .f2{font-family:var(--west);font-size:20px;color:var(--cyan);display:block;}
+.fontnote .f3{font-family:var(--body);font-weight:700;font-size:18px;color:var(--cream);display:block;}
+.fontnote small{font-size:12px;opacity:.85;}
+/* ============ §2 牌面系统墙 ============ */
+.cardwall{position:relative;overflow:hidden;}
+.cardwall .bg{
+  position:absolute;inset:0;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 118%,rgba(0,229,255,.10) 0deg 3deg,transparent 3deg 11deg),
+    var(--ink2);
+}
+.cardrow{
+  position:relative;display:flex;gap:34px;justify-content:center;align-items:flex-end;
+  padding:78px 40px 66px;
+}
+/* 牌面：亮底高对比（氛围暗、牌不暗） */
+.card{
+  width:150px;height:212px;background:var(--cream);
+  border:4px solid var(--ink);border-radius:14px;position:relative;flex:none;
+  box-shadow:7px 7px 0 rgba(0,0,0,.55);
+}
+.card .halftone-in{
+  position:absolute;inset:6px;border-radius:9px;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(24,16,24,.07) 1.3px,transparent 1.4px);
+  background-size:10px 10px;
+}
+.card .idx{
+  position:absolute;top:8px;left:9px;text-align:center;line-height:1;
+  font-family:var(--west);font-size:34px;color:var(--ink);
+}
+.card .idx .suit{font-size:27px;display:block;margin-top:3px;}
+.card.red .idx{color:var(--red);}
+.card .big{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:74px;color:var(--ink);
+}
+.card.red .big{color:var(--red);}
+.card .big.word{font-family:var(--disp);font-size:52px;letter-spacing:2px;
+  -webkit-text-stroke:2px var(--ink);paint-order:stroke fill;}
+.card .idx-br{
+  position:absolute;bottom:8px;right:9px;transform:rotate(180deg);text-align:center;line-height:1;
+  font-family:var(--west);font-size:34px;color:var(--ink);
+}
+.card.red .idx-br{color:var(--red);}
+.card .idx-br .suit{font-size:27px;display:block;margin-top:3px;}
+/* 掼蛋灵魂双徽章：锯齿漫画爆章 */
+.seal{
+  position:absolute;top:-16px;right:-18px;width:58px;height:58px;z-index:3;
+  display:flex;align-items:center;justify-content:center;
+  border:3px solid var(--ink);
+  font-family:var(--disp);font-size:27px;color:var(--ink);
+  transform:rotate(10deg);
+  box-shadow:3px 3px 0 rgba(0,0,0,.5);
+}
+.seal.ji{background:var(--yellow);}
+.seal.pei{background:var(--magenta);color:var(--cream);-webkit-text-stroke:1.2px var(--ink);paint-order:stroke fill;transform:rotate(-9deg);}
+.seal::after{
+  content:'';position:absolute;inset:4px;
+  background-image:radial-gradient(circle,rgba(24,16,24,.22) 1.1px,transparent 1.2px);
+  background-size:7px 7px;clip-path:inherit;pointer-events:none;
+}
+.seal span{position:relative;z-index:2;}
+/* 牌背 */
+.card.back{
+  background:
+    radial-gradient(circle,rgba(255,246,229,.25) 1.5px,transparent 1.6px) 0 0/11px 11px,
+    repeating-linear-gradient(45deg,var(--magenta) 0 16px,#c9185f 16px 32px);
+  display:flex;align-items:center;justify-content:center;
+}
+.card.back .logo{
+  width:84px;height:84px;border:var(--line);background:var(--yellow);
+  display:flex;align-items:center;justify-content:center;transform:rotate(-8deg);
+  font-family:var(--west);font-size:30px;color:var(--ink);letter-spacing:1px;
+  box-shadow:4px 4px 0 var(--ink);
+}
+.cardlabel{
+  position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);
+  white-space:nowrap;font-family:var(--disp);font-size:16px;letter-spacing:1px;
+  background:var(--ink);border:2px solid var(--cream);padding:3px 12px;color:var(--cream);
+}
+.cardlabel.hot{border-color:var(--yellow);color:var(--yellow);}
+.cardnote{
+  position:relative;padding:0 64px 46px;font-size:14px;line-height:1.8;color:var(--cream);max-width:1100px;
+}
+.cardnote b{color:var(--cyan);}
+</style>
+<style>
+/* ============ §3 横屏牌桌 ============ */
+.tablewrap{padding:64px 50px 70px;position:relative;}
+.table{
+  position:relative;width:1240px;height:598px;margin:0 auto;
+  transform:rotate(-1.1deg);
+  border:5px solid var(--ink);border-radius:26px;
+  box-shadow:0 0 0 3px var(--yellow),14px 16px 0 rgba(0,0,0,.6);
+  overflow:hidden;
+  background:
+    radial-gradient(ellipse at 50% 46%,#3a1f36 0%,#241722 55%,#1a1119 100%);
+}
+.table .felt-lines{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    repeating-conic-gradient(from 0deg at 50% 46%,rgba(255,212,0,.05) 0deg 2.5deg,transparent 2.5deg 12deg);
+}
+.table .felt-dots{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(255,246,229,.09) 1.4px,transparent 1.5px);
+  background-size:15px 15px;
+}
+/* 玩家名牌 */
+.player{
+  position:absolute;display:flex;align-items:center;gap:10px;z-index:6;
+  background:var(--ink);border:var(--line);padding:7px 14px 7px 8px;
+  box-shadow:5px 5px 0 rgba(0,0,0,.55);
+}
+.player .nm{font-family:var(--disp);font-size:19px;letter-spacing:1px;color:var(--cream);}
+.player .cnt{
+  font-family:var(--west);font-size:15px;color:var(--ink);background:var(--cyan);
+  border:2px solid var(--ink);padding:1px 8px;transform:skewX(-10deg);
+}
+.player .cnt span{display:inline-block;transform:skewX(10deg);}
+.player .cnt.warn{background:var(--magenta);color:var(--cream);animation:blink 1s steps(2) infinite;}
+@keyframes blink{50%{background:var(--yellow);color:var(--ink);}}
+/* 报牌警示爆章 */
+.baopai{
+  position:absolute;top:-20px;right:-24px;width:52px;height:52px;z-index:7;
+  background:var(--red);border:3px solid var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-size:19px;color:var(--cream);
+  -webkit-text-stroke:1.2px var(--ink);paint-order:stroke fill;
+  transform:rotate(12deg);box-shadow:3px 3px 0 rgba(0,0,0,.5);
+}
+/* 几何符号化头像（SVG 48px） */
+.avatar{width:48px;height:48px;flex:none;border:var(--line);background:var(--ink2);}
+/* 出牌墩 */
+.playpile{position:absolute;display:flex;gap:-10px;z-index:5;}
+.mini{
+  width:52px;height:72px;background:var(--cream);border:3px solid var(--ink);border-radius:8px;
+  position:relative;box-shadow:4px 4px 0 rgba(0,0,0,.5);flex:none;
+  font-family:var(--west);
+}
+.mini .mi{position:absolute;top:3px;left:5px;font-size:19px;line-height:1;color:var(--ink);}
+.mini .mi .s{display:block;font-size:15px;margin-top:1px;}
+.mini.red .mi{color:var(--red);}
+.mini .mc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--ink);}
+.mini.red .mc{color:var(--red);}
+.mini+.mini{margin-left:-14px;}
+.pilelabel{
+  position:absolute;top:-26px;left:0;white-space:nowrap;
+  font-size:12px;font-weight:700;color:var(--ink);background:var(--cream);
+  border:2px solid var(--ink);padding:1px 8px;transform:rotate(-3deg);
+}
+/* 台面中央 */
+.center{
+  position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:6;
+  text-align:center;
+}
+.daji{
+  width:132px;height:132px;margin:0 auto;background:var(--yellow);border:4px solid var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  box-shadow:6px 6px 0 var(--magenta);transform:rotate(-4deg);
+}
+.daji .t{font-family:var(--disp);font-size:30px;color:var(--ink);letter-spacing:2px;line-height:1;}
+.daji .n{font-family:var(--west);font-size:52px;color:var(--ink);line-height:1;}
+.scoreline{
+  margin-top:14px;display:inline-block;background:var(--ink);border:var(--line);
+  padding:5px 18px;font-family:var(--disp);font-size:22px;letter-spacing:2px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.5);
+}
+.scoreline .us{color:var(--cyan);}
+.scoreline .vs{color:var(--cream);font-size:14px;margin:0 8px;}
+.scoreline .them{color:var(--magenta);}
+.lastplay{margin-top:10px;font-size:14px;font-weight:700;color:var(--cream);background:rgba(24,16,24,.8);border:2px solid var(--cyan);display:inline-block;padding:3px 12px;}
+/* 炸弹拟声爆框 */
+.bomb-onom{
+  position:absolute;right:120px;top:170px;width:190px;height:190px;z-index:8;
+  background:var(--orange);border:4px solid var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  transform:rotate(10deg);box-shadow:8px 8px 0 rgba(0,0,0,.5);
+}
+.bomb-onom .in{
+  font-family:var(--disp);font-size:48px;color:var(--cream);
+  -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;
+  transform:rotate(-8deg);letter-spacing:2px;
+}
+.bomb-onom .sub{
+  position:absolute;bottom:16px;font-family:var(--west);font-size:13px;letter-spacing:2px;color:var(--ink);
+}
+/* 轮到你：回合指示环 */
+.turnring{
+  position:absolute;left:50%;bottom:96px;transform:translateX(-50%);z-index:4;
+  width:760px;height:150px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 100%,rgba(255,212,0,.20) 0%,transparent 68%);
+}
+.turntag{
+  position:absolute;left:50%;bottom:212px;transform:translateX(-50%) skewX(-10deg);z-index:9;
+  background:var(--cyan);border:var(--line);padding:5px 22px;
+  font-family:var(--disp);font-size:21px;color:var(--ink);letter-spacing:3px;
+  box-shadow:5px 5px 0 var(--magenta);
+  animation:bob 1.2s ease-in-out infinite;
+}
+@keyframes bob{50%{transform:translateX(-50%) skewX(-10deg) translateY(-5px);}}
+/* 手牌扇形（迷你牌） */
+.handfan{
+  position:absolute;left:50%;bottom:118px;transform:translateX(-50%);z-index:6;
+  width:700px;height:118px;
+}
+.handfan .mini{position:absolute;bottom:0;transform-origin:50% 240%;}
+.handfan .mini.up{bottom:14px;}
+.handfan .seal{width:34px;height:34px;font-size:17px;top:-10px;right:-10px;border-width:2px;box-shadow:2px 2px 0 rgba(0,0,0,.5);}
+/* 教练提示条 */
+.coach{
+  position:absolute;left:50%;bottom:70px;transform:translateX(-50%);z-index:7;
+  background:var(--ink);border:3px solid var(--yellow);padding:7px 22px;
+  font-size:15px;font-weight:700;color:var(--cream);letter-spacing:1px;
+  box-shadow:4px 4px 0 rgba(0,0,0,.5);white-space:nowrap;
+}
+.coach b{color:var(--yellow);}
+/* 三大按钮 */
+.actions{position:absolute;right:36px;bottom:24px;z-index:9;display:flex;gap:14px;}
+.btn{
+  font-family:var(--disp);font-size:23px;letter-spacing:3px;
+  border:var(--line);padding:10px 26px;cursor:default;
+  box-shadow:5px 5px 0 rgba(0,0,0,.6);transform:skewX(-8deg);
+}
+.btn span{display:inline-block;transform:skewX(8deg);}
+.btn.ghost{background:var(--ink2);color:var(--cyan);border-color:var(--cyan);}
+.btn.pass{background:var(--cream);color:var(--ink);}
+.btn.main{background:var(--yellow);color:var(--ink);font-size:27px;padding:12px 40px;box-shadow:6px 6px 0 var(--magenta);}
+/* 自己名牌 */
+.me{left:36px;bottom:24px;}
+</style>
+<style>
+/* ============ §4 竖屏牌桌 ============ */
+.portraitwrap{display:flex;gap:56px;padding:64px 60px 72px;align-items:flex-start;position:relative;}
+.ptable{
+  width:390px;height:790px;flex:none;position:relative;overflow:hidden;
+  border:5px solid var(--ink);border-radius:24px;
+  box-shadow:0 0 0 3px var(--cyan),12px 14px 0 rgba(0,0,0,.6);
+  background:radial-gradient(ellipse at 50% 40%,#3a1f36 0%,#241722 60%,#1a1119 100%);
+}
+.ptable .felt-dots{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(255,246,229,.09) 1.3px,transparent 1.4px);
+  background-size:13px 13px;
+}
+.popp{position:absolute;left:10px;right:10px;display:flex;justify-content:space-between;z-index:5;}
+.popp.top{top:12px;}
+.pplayer{
+  background:var(--ink);border:3px solid var(--ink);outline:2px solid var(--cream);
+  padding:5px 10px 5px 6px;display:flex;align-items:center;gap:7px;
+}
+.pplayer .nm{font-family:var(--disp);font-size:15px;color:var(--cream);}
+.pplayer .cnt{font-family:var(--west);font-size:12px;background:var(--cyan);color:var(--ink);border:2px solid var(--ink);padding:0 6px;}
+.pplayer .cnt.warn{background:var(--magenta);color:var(--cream);}
+.pavatar{width:32px;height:32px;flex:none;border:2px solid var(--ink);background:var(--ink2);}
+.pmid{position:absolute;top:86px;left:0;right:0;text-align:center;z-index:5;}
+.pmid .daji{width:84px;height:84px;box-shadow:4px 4px 0 var(--magenta);}
+.pmid .daji .t{font-size:19px;}
+.pmid .daji .n{font-size:34px;}
+.pmid .scoreline{font-size:16px;padding:3px 12px;margin-top:8px;}
+.pmid .lastplay{font-size:12px;margin-top:6px;}
+.ppartner{position:absolute;top:236px;left:10px;z-index:5;}
+.ppile{position:absolute;left:0;right:0;display:flex;justify-content:center;z-index:4;}
+.ppile.opp-pile{top:170px;}
+.ppile.me-pile{top:420px;}
+.pcoach{
+  position:absolute;top:500px;left:14px;right:14px;z-index:5;text-align:center;
+  background:var(--ink);border:2px solid var(--yellow);padding:5px 10px;
+  font-size:13px;font-weight:700;color:var(--cream);
+}
+.phand{
+  position:absolute;top:536px;left:10px;right:10px;z-index:6;
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;
+}
+.phand .mini{width:42px;height:58px;border-width:2px;border-radius:6px;box-shadow:3px 3px 0 rgba(0,0,0,.5);}
+.phand .mini .mi{font-size:15px;top:2px;left:4px;}
+.phand .mini .mi .s{font-size:12px;}
+.phand .mini .mc{font-size:19px;}
+.phand .mini.up{outline:3px solid var(--yellow);transform:translateY(-6px);}
+.phand .seal{width:24px;height:24px;font-size:13px;top:-8px;right:-8px;border-width:2px;box-shadow:none;}
+.pactions{position:absolute;bottom:14px;left:12px;right:12px;z-index:7;display:flex;gap:10px;}
+.pactions .btn{flex:1;padding:9px 0;font-size:18px;text-align:center;letter-spacing:2px;}
+.pactions .btn.main{font-size:20px;}
+.pme{position:absolute;bottom:76px;left:12px;z-index:7;}
+/* 竖屏注释漫画格 */
+.pnotes{flex:1;display:flex;flex-direction:column;gap:26px;}
+.pnote{
+  border:var(--line);background:var(--ink);padding:20px 24px;position:relative;
+  box-shadow:7px 7px 0 var(--magenta);
+}
+.pnote:nth-child(2){box-shadow:7px 7px 0 var(--cyan);transform:rotate(.6deg);}
+.pnote:nth-child(3){box-shadow:7px 7px 0 var(--yellow);transform:rotate(-.6deg);}
+.pnote h4{font-family:var(--disp);font-size:22px;color:var(--yellow);letter-spacing:2px;margin-bottom:8px;}
+.pnote p{font-size:14px;line-height:1.8;color:var(--cream);}
+.pnote p b{color:var(--cyan);}
+/* ============ §5 欢迎页 + 大厅 ============ */
+.lobbywrap{display:flex;gap:44px;padding:66px 60px 76px;align-items:stretch;}
+.welcome{
+  width:470px;flex:none;border:var(--line);background:var(--ink);
+  padding:44px 40px 40px;position:relative;overflow:hidden;
+  box-shadow:10px 10px 0 var(--magenta);
+}
+.welcome .dots{position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(0,229,255,.16) 1.5px,transparent 1.6px);background-size:15px 15px;}
+.welcome h3{position:relative;font-family:var(--disp);font-size:52px;color:var(--yellow);letter-spacing:3px;
+  text-shadow:4px 4px 0 var(--magenta);transform:rotate(-2deg);}
+.welcome .slogan{position:relative;margin:14px 0 30px;font-size:16px;font-weight:700;color:var(--cream);
+  border-left:5px solid var(--cyan);padding-left:12px;line-height:1.7;}
+.field{position:relative;margin-bottom:22px;}
+.field label{display:block;font-family:var(--disp);font-size:17px;color:var(--cyan);letter-spacing:2px;margin-bottom:8px;}
+.field input{
+  width:100%;background:var(--ink2);border:var(--line);padding:13px 16px;
+  font-family:var(--body);font-size:16px;font-weight:700;color:var(--cream);outline:none;
+  box-shadow:inset 4px 4px 0 rgba(0,0,0,.4);
+}
+.field input::placeholder{color:rgba(255,246,229,.55);}
+.enterbtn{
+  position:relative;width:100%;margin-top:8px;background:var(--yellow);border:4px solid var(--ink);
+  font-family:var(--disp);font-size:30px;letter-spacing:6px;color:var(--ink);
+  padding:15px 0;box-shadow:7px 7px 0 var(--magenta);transform:skewX(-6deg);
+}
+.enterbtn span{display:inline-block;transform:skewX(6deg);}
+.hall{flex:1;display:flex;flex-direction:column;gap:26px;}
+.roomcard{
+  border:var(--line);background:var(--ink);padding:22px 28px;position:relative;
+  box-shadow:8px 8px 0 var(--cyan);display:flex;align-items:center;gap:24px;
+}
+.roomcard.locked{box-shadow:8px 8px 0 var(--yellow);opacity:.92;}
+.roomcard.full{box-shadow:8px 8px 0 var(--orange);}
+.roomcard .rno{
+  font-family:var(--west);font-size:15px;color:var(--ink);background:var(--cream);
+  border:var(--line);padding:4px 12px;transform:rotate(-3deg);flex:none;
+}
+.roomcard h4{font-family:var(--disp);font-size:27px;color:var(--cream);letter-spacing:2px;}
+.roomcard h4 em{font-style:normal;color:var(--yellow);}
+.roomcard .rsub{font-size:13px;color:rgba(255,246,229,.85);margin-top:4px;}
+.seats{display:flex;gap:12px;margin-left:auto;}
+.seat{
+  width:86px;text-align:center;border:3px solid var(--ink);background:var(--ink2);padding:8px 4px 7px;
+}
+.seat .who{font-size:13px;font-weight:700;margin-top:5px;color:var(--cream);}
+.seat.you{outline:3px solid var(--yellow);}
+.seat .join{
+  display:inline-block;margin-top:6px;font-family:var(--disp);font-size:14px;letter-spacing:2px;
+  background:var(--yellow);color:var(--ink);border:2px solid var(--ink);padding:2px 12px;
+}
+.statetag{
+  margin-left:auto;font-family:var(--disp);font-size:19px;letter-spacing:2px;
+  border:var(--line);padding:8px 20px;transform:skewX(-8deg);flex:none;
+}
+.statetag.dev{background:var(--cyan);color:var(--ink);}
+.statetag.full{background:var(--red);color:var(--cream);-webkit-text-stroke:.8px var(--ink);paint-order:stroke fill;}
+/* ============ §6 战绩结算榜 ============ */
+.resultswrap{padding:66px 60px 78px;position:relative;overflow:hidden;}
+.resultswrap .bg{
+  position:absolute;inset:0;
+  background:
+    repeating-conic-gradient(from 4deg at 50% -10%,rgba(255,46,126,.09) 0deg 4deg,transparent 4deg 13deg),
+    var(--ink2);
+}
+.ranks{position:relative;display:flex;gap:28px;align-items:flex-end;justify-content:center;margin-top:30px;}
+.rankcard{
+  width:262px;border:var(--line);background:var(--ink);text-align:center;
+  padding:26px 18px 22px;position:relative;box-shadow:8px 8px 0 rgba(0,0,0,.55);
+}
+.rankcard.r1{background:var(--yellow);transform:rotate(-1.5deg) translateY(-26px);box-shadow:10px 10px 0 var(--magenta);}
+.rankcard.r2{transform:rotate(1deg) translateY(-8px);}
+.rankcard.r3{transform:rotate(-.8deg);}
+.rankcard.r4{transform:rotate(1.4deg) translateY(8px);opacity:.94;}
+.rankcard .medal{
+  display:inline-block;font-family:var(--disp);font-size:30px;letter-spacing:2px;
+  border:var(--line);padding:4px 20px;margin-bottom:14px;transform:skewX(-8deg);
+}
+.rankcard.r1 .medal{background:var(--magenta);color:var(--cream);-webkit-text-stroke:1px var(--ink);paint-order:stroke fill;}
+.rankcard.r2 .medal{background:var(--cyan);color:var(--ink);}
+.rankcard.r3 .medal{background:var(--cream);color:var(--ink);}
+.rankcard.r4 .medal{background:var(--ink2);color:var(--cream);border-color:var(--cream);}
+.rankcard .who{font-family:var(--disp);font-size:29px;letter-spacing:2px;color:var(--cream);}
+.rankcard.r1 .who{color:var(--ink);}
+.rankcard .delta{margin-top:10px;font-size:14px;font-weight:700;color:var(--cream);}
+.rankcard.r1 .delta{color:var(--ink);}
+.rankcard .delta b{font-family:var(--west);color:var(--cyan);}
+.rankcard.r1 .delta b{color:#b3004d;}
+.levelup{
+  position:relative;margin:44px auto 0;width:max-content;
+  border:4px solid var(--ink);background:var(--magenta);padding:14px 40px;
+  font-family:var(--disp);font-size:29px;color:var(--cream);letter-spacing:3px;
+  -webkit-text-stroke:1.5px var(--ink);paint-order:stroke fill;
+  transform:rotate(-1.6deg);box-shadow:8px 8px 0 var(--cyan);
+}
+.levelup .arr{font-family:var(--west);font-size:34px;color:var(--yellow);-webkit-text-stroke:1.5px var(--ink);margin:0 10px;}
+.againbtn{
+  position:relative;display:block;margin:40px auto 0;width:420px;text-align:center;
+  background:var(--yellow);border:5px solid var(--ink);
+  font-family:var(--disp);font-size:40px;letter-spacing:8px;color:var(--ink);
+  padding:18px 0;box-shadow:9px 9px 0 var(--magenta);transform:skewX(-6deg) rotate(-1deg);
+}
+.againbtn span{display:inline-block;transform:skewX(6deg);}
+/* 板块间速度线分隔条 */
+.divider{
+  height:34px;margin:0 28px;border-top:4px solid var(--ink);border-bottom:4px solid var(--ink);
+  background:repeating-linear-gradient(105deg,var(--magenta) 0 18px,var(--ink) 18px 36px,var(--yellow) 36px 40px,var(--ink) 40px 58px);
+}
+.footer{
+  padding:26px 60px 44px;font-size:13px;color:rgba(255,246,229,.75);line-height:1.8;
+  font-family:var(--body);
+}
+.footer b{color:var(--yellow);}
+</style>
+</head>
+<body>

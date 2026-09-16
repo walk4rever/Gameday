@@ -65,3 +65,58 @@ export function consecutiveGroupInfo(
 
   return { orderKey: indices[0]!, topRank: SHAPE_RANKS[indices[indices.length - 1]!]! };
 }
+
+/** 逢人配（当前级牌中的红桃牌为万能百搭牌） */
+export function isWildcard(card: Card, level: Rank): boolean {
+  return card.suit === 'heart' && card.rank === level;
+}
+
+export interface StraightWindow {
+  ranks: Rank[];
+  orderKey: number;
+  topRank: Rank;
+}
+
+/** 掼蛋所有合法的 5 张顺子窗口（从 A2345 到 10JQKA），按从低到高排序 */
+export function straightWindows(): StraightWindow[] {
+  const list: StraightWindow[] = [];
+  // A2345 为最小顺子，orderKey 为 -1，topRank 为 5
+  list.push({ ranks: ['A', '2', '3', '4', '5'], orderKey: -1, topRank: '5' });
+  for (let i = 0; i + 5 <= SHAPE_RANKS.length; i++) {
+    const ranks = SHAPE_RANKS.slice(i, i + 5);
+    list.push({ ranks, orderKey: i, topRank: ranks[4]! });
+  }
+  return list;
+}
+
+export interface ConsecutiveWindow<T extends Rank[]> {
+  ranks: T;
+  orderKey: number;
+  topRank: Rank;
+}
+
+/** 掼蛋所有合法的 2 连 3 张（钢板 / 三同连张）窗口 */
+export function tripleStraightWindows(): ConsecutiveWindow<[Rank, Rank]>[] {
+  const list: ConsecutiveWindow<[Rank, Rank]>[] = [];
+  for (let i = 0; i + 2 <= SHAPE_RANKS.length; i++) {
+    list.push({
+      ranks: [SHAPE_RANKS[i]!, SHAPE_RANKS[i + 1]!] as [Rank, Rank],
+      orderKey: i,
+      topRank: SHAPE_RANKS[i + 1]!
+    });
+  }
+  return list;
+}
+
+/** 掼蛋所有合法的 3 连对（木板）窗口 */
+export function triplePairWindows(): ConsecutiveWindow<[Rank, Rank, Rank]>[] {
+  const list: ConsecutiveWindow<[Rank, Rank, Rank]>[] = [];
+  for (let i = 0; i + 3 <= SHAPE_RANKS.length; i++) {
+    list.push({
+      ranks: [SHAPE_RANKS[i]!, SHAPE_RANKS[i + 1]!, SHAPE_RANKS[i + 2]!] as [Rank, Rank, Rank],
+      orderKey: i,
+      topRank: SHAPE_RANKS[i + 2]!
+    });
+  }
+  return list;
+}

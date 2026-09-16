@@ -156,7 +156,7 @@ describe('passTurn', () => {
     expect(state.currentTrick).toEqual({});
   });
 
-  it('出牌人出完牌离场后，过牌轮转到下一位在场玩家重新起牌', () => {
+  it('出牌人出完牌离场后，其余人均过牌，由其对家搭档接风领出', () => {
     const hands: [Card[], Card[], Card[], Card[]] = [
       [card('spade', '5'), card('heart', '5')],
       [card('spade', '3')],
@@ -164,7 +164,7 @@ describe('passTurn', () => {
       [card('club', '6')]
     ];
     let state = createGame(hands, level, 0);
-    state = expectOk(playCards(state, 0, hands[0]!)); // 出对 5，正好打完，离场
+    state = expectOk(playCards(state, 0, hands[0]!)); // 座位 0 出对 5 打完走脱
     expect(state.finished).toEqual([0]);
     expect(state.currentTurn).toBe(1);
 
@@ -173,7 +173,26 @@ describe('passTurn', () => {
     state = expectOk(passTurn(state, 3));
 
     expect(state.lastPlay).toBeNull();
-    expect(state.currentTurn).toBe(1); // 领先者已离场，轮到他之后第一个在场玩家
+    expect(state.currentTurn).toBe(2); // 掼蛋接风规则：座位 0 的搭档是座位 2，由座位 2 接风领出
+  });
+
+  it('如果搭档也已走脱出完牌，接风权顺延至下家在场玩家', () => {
+    const hands: [Card[], Card[], Card[], Card[]] = [
+      [card('spade', '5')],
+      [card('spade', '3')],
+      [], // 搭档座位 2 已经没有牌（已走脱）
+      [card('club', '6')]
+    ];
+    let state = createGame(hands, level, 0);
+    state.finished = [2]; // 座位 2 已经先走
+    state = expectOk(playCards(state, 0, hands[0]!)); // 座位 0 打完走脱
+    expect(state.finished).toEqual([2, 0]);
+
+    state = expectOk(passTurn(state, 1));
+    state = expectOk(passTurn(state, 3));
+
+    expect(state.lastPlay).toBeNull();
+    expect(state.currentTurn).toBe(1); // 搭档 2 已离场，接风权顺延至下家在场玩家 1
   });
 });
 

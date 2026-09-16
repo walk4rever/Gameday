@@ -12,6 +12,7 @@
   "dependencies": {
     "@guandan/rules": "workspace:*",
     "@guandan/engine": "workspace:*",
+    "@guandan/bot": "workspace:*",
     "@guandan/protocol": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

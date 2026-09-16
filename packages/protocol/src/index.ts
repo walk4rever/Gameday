@@ -5,18 +5,24 @@
 import type { Seat } from '@guandan/engine';
 import type { Card, Rank } from '@guandan/rules';
 
+export type PlayerStatus = 'online' | 'offline' | 'left';
+
 export type ClientMessage =
   | { type: 'start' }
   | { type: 'play'; cardIds: string[] }
   | { type: 'pass' }
   | { type: 'restart' }
-  | { type: 'leave' };
+  | { type: 'leave' }
+  | { type: 'ping' }
+  | { type: 'delegate_bot'; seat: Seat }
+  | { type: 'dissolve' };
 
 export interface LobbySeatSnapshot {
   seat: Seat;
   name: string;
   isBot: boolean;
   connected: boolean;
+  status: PlayerStatus;
 }
 
 /** 进房间还没开打时的状态：谁在线、谁是机器人，等一个人按"开打"。 */
@@ -31,6 +37,7 @@ export interface SeatSnapshot {
   name: string;
   isBot: boolean;
   connected: boolean;
+  status: PlayerStatus;
   handCount: number;
 }
 
@@ -38,6 +45,12 @@ export interface SeatSnapshot {
 export type SeatTrickAction =
   | { seat: Seat; action: 'play'; cards: Card[] }
   | { seat: Seat; action: 'pass' };
+
+export interface PausedInfo {
+  seat: Seat;
+  name: string;
+  reason: 'offline' | 'left';
+}
 
 export interface StateMessage {
   type: 'state';
@@ -51,6 +64,11 @@ export interface StateMessage {
   currentTrick: SeatTrickAction[];
   finished: Seat[];
   roundOver: boolean;
+  paused: PausedInfo | null;
+  tribute?: {
+    type: 'none' | 'anti_tribute' | 'single' | 'double';
+    description: string;
+  } | null;
 }
 
 export interface ErrorMessage {
@@ -58,4 +76,7 @@ export interface ErrorMessage {
   message: string;
 }
 
-export type ServerMessage = LobbyMessage | StateMessage | ErrorMessage;
+export type PongMessage = { type: 'pong' };
+
+export type ServerMessage = LobbyMessage | StateMessage | ErrorMessage | PongMessage;
+

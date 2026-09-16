@@ -44,12 +44,6 @@ export function sortHand(hand: Card[], level: Rank): Card[] {
   return [...hand].sort((a, b) => compareValue(a.rank, level) - compareValue(b.rank, level));
 }
 
-export function smallestMove(moves: Play[], level: Rank): Play {
-  return [...moves].sort(
-    (a, b) => a.size - b.size || compareValue(a.rank, level) - compareValue(b.rank, level)
-  )[0]!;
-}
-
 export function playTypeName(type: PlayType, size?: number): string {
   switch (type) {
     case 'single':
@@ -139,7 +133,7 @@ export function analyzeSelection(
     };
   }
 
-  const play = classifyPlay(selectedCards);
+  const play = classifyPlay(selectedCards, level);
   if (!play) {
     return {
       valid: false,
@@ -209,9 +203,9 @@ export function rankOrderTitle(order: number): { title: string; badge: string; c
 export function calculateMatchResult(
   finishOrder: Seat[],
   humanSeat: Seat
-): { title: string; subtitle: string; isVictory: boolean; levelBonus: number } {
+): { title: string; subtitle: string; tributeInfo: string; isVictory: boolean; levelBonus: number } {
   if (finishOrder.length < 4) {
-    return { title: '对局结束', subtitle: '等待结算', isVictory: false, levelBonus: 0 };
+    return { title: '对局结束', subtitle: '等待结算', tributeInfo: '', isVictory: false, levelBonus: 0 };
   }
 
   const partnerSeat = ((humanSeat + 2) % 4) as Seat;
@@ -222,51 +216,67 @@ export function calculateMatchResult(
   const first = teamRanks[0]!;
   const second = teamRanks[1]!;
 
-  // 双上: 我方包揽 1、2 名
+  // 1. 双上: 我方包揽 1、2 名
   if (first === 0 && second === 1) {
     return {
       title: '🎉 双上大捷！',
       subtitle: '我方搭档包揽头游与二游，升 3 级！',
+      tributeInfo: '下局对方双贡（末游贡头游、三游贡二游，双大王可抗贡）',
       isVictory: true,
       levelBonus: 3
     };
   }
 
-  // 单上: 我方获得 1、3 名
+  // 2. 单上: 我方获得 1、3 名
   if (first === 0 && second === 2) {
     return {
       title: '✨ 单上胜利！',
-      subtitle: '我方拿下头游与三游，升 1 级！',
+      subtitle: '我方拿下头游与三游，升 2 级！',
+      tributeInfo: '下局对方末游向我方头游进贡最大牌（末游双大王可抗贡）',
+      isVictory: true,
+      levelBonus: 2
+    };
+  }
+
+  // 3. 平局情况 1: 我方 1、4 名 (对手 2、3 名)
+  if (first === 0 && second === 3) {
+    return {
+      title: '🤝 战至平局',
+      subtitle: '我方拿下头游但搭档末游，我方升 1 级。',
+      tributeInfo: '双方平局无需进贡，下局由我方头游首出。',
       isVictory: true,
       levelBonus: 1
     };
   }
 
-  // 平局: 我方 1、4 名
-  if (first === 0 && second === 3) {
+  // 4. 平局情况 2: 我方 2、3 名 (对手 1、4 名)
+  if (first === 1 && second === 2) {
     return {
       title: '🤝 战至平局',
-      subtitle: '我方拿下头游，但搭档末游，双方不升不降。',
-      isVictory: true,
-      levelBonus: 0
+      subtitle: '对方拿下头游但其搭档末游，对方升 1 级。',
+      tributeInfo: '双方平局无需进贡，下局由对方头游首出。',
+      isVictory: false,
+      levelBonus: -1
     };
   }
 
-  // 对方双上 (对手是 1、2 名)
+  // 5. 对方双上 (我方 3、4 名，对手包揽 1、2 名)
   if (first === 2 && second === 3) {
     return {
-      title: '💔 遗憾落败',
-      subtitle: '对手双上，对方升 3 级，再接再厉！',
+      title: '💥 惨遭双下',
+      subtitle: '对方包揽头游与二游，对方升 3 级。',
+      tributeInfo: '下局我方双贡（末游贡头游、三游贡二游，双大王可抗贡）',
       isVictory: false,
       levelBonus: -3
     };
   }
 
-  // 对方单上 (对手是 1、3 名)
+  // 6. 对方单上 (我方 2、4 名，即对手 1、3 名)
   return {
     title: '💔 局势惜败',
-    subtitle: '对方单上，对方升 1 级。复盘总结，再战一盘！',
+    subtitle: '对方获得头游与三游，对方升 2 级。',
+    tributeInfo: '下局我方末游向对方头游进贡最大牌（末游双大王可抗贡）',
     isVictory: false,
-    levelBonus: -1
+    levelBonus: -2
   };
 }

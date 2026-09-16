@@ -25,7 +25,8 @@ export function LobbyScreen({ you, seats, error, onStart, onShowRules, onExit }:
       seat: seatNum,
       name: `座位 ${seatNum}`,
       isBot: true,
-      connected: false
+      connected: false,
+      status: 'online'
     };
   };
 
@@ -66,7 +67,7 @@ export function LobbyScreen({ you, seats, error, onStart, onShowRules, onExit }:
               ? '机器人就绪'
               : seatSnapshot.connected
                 ? '已就绪'
-                : '离线代打'}
+                : '离线中'}
           </span>
         </div>
       </div>

@@ -168,20 +168,20 @@ class SoundManager {
     osc2.stop(now + 0.25);
   }
 
-  /** 轮到自己出牌的柔和提示音 */
+  /** 轮到自己出牌的柔和提示音：清脆上扬的三音微和弦 */
   public yourTurn(): void {
     const ctx = this.initCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
 
-    const playTone = (freq: number, start: number, duration: number) => {
+    const playTone = (freq: number, start: number, duration: number, vol = 0.12) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, start);
 
       gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.12, start + 0.02);
+      gain.gain.linearRampToValueAtTime(vol, start + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
 
       osc.connect(gain);
@@ -190,8 +190,9 @@ class SoundManager {
       osc.stop(start + duration);
     };
 
-    playTone(523.25, now, 0.15); // C5
-    playTone(659.25, now + 0.1, 0.22); // E5
+    playTone(523.25, now, 0.14, 0.12);        // C5
+    playTone(659.25, now + 0.08, 0.16, 0.14);  // E5
+    playTone(783.99, now + 0.16, 0.24, 0.16);  // G5
   }
 
   /** 一局胜利结算华丽小和弦 */
@@ -219,14 +220,14 @@ class SoundManager {
     });
   }
 
-  /** 移动端触感反馈（轻/中/重/成功） */
-  public haptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' = 'light'): void {
+  /** 移动端触感反馈（轻/中/重/成功/错误） */
+  public haptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light'): void {
     triggerHaptic(type);
   }
 }
 
 /** 移动端触感反馈独立工具函数 */
-export function triggerHaptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' = 'light'): void {
+export function triggerHaptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light'): void {
   if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return;
   try {
     switch (type) {
@@ -242,6 +243,9 @@ export function triggerHaptic(type: 'selection' | 'light' | 'medium' | 'heavy' |
         break;
       case 'success':
         navigator.vibrate([15, 60, 25]);
+        break;
+      case 'error':
+        navigator.vibrate([40, 40, 40]);
         break;
     }
   } catch {
