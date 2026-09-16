@@ -30,15 +30,12 @@ export default {
       const roomName = url.searchParams.get('room') ?? 'default';
       const playerId = url.searchParams.get('playerId') ?? '';
       const stub1 = env.ROOM.get(env.ROOM.idFromName(roomName));
-      const stub2 = env.ROOM.get(env.ROOM.idFromName(`${roomName}:2`));
-
-      const [res1, res2] = await Promise.all([
-        stub1.fetch(new Request(`https://internal/api/table-status?table=1&playerId=${encodeURIComponent(playerId)}`)),
-        stub2.fetch(new Request(`https://internal/api/table-status?table=2&playerId=${encodeURIComponent(playerId)}`))
-      ]);
-
+      const res1 = await stub1.fetch(
+        new Request(
+          `https://internal/api/table-status?table=1&playerId=${encodeURIComponent(playerId)}`
+        )
+      );
       const data1 = res1.ok ? ((await res1.json()) as { table: unknown }) : null;
-      const data2 = res2.ok ? ((await res2.json()) as { table: unknown }) : null;
 
       const fallbackSeats = [0, 1, 2, 3].map((i) => ({
         seat: i,
@@ -61,17 +58,23 @@ export default {
         seats: fallbackSeats
       };
 
-      const table2Info = data2?.table ?? {
+      const table2Info = {
         id: '2',
-        name: '2号桌 · 经典掼蛋',
-        type: 'guandan',
+        name: '2号桌 · 经典双升',
+        type: 'shuangsheng',
         gameActive: false,
         isFull: false,
         isMember: false,
         humanSeatsCount: 0,
         maxSeats: 4,
-        status: 'empty',
-        seats: fallbackSeats
+        status: 'developing',
+        seats: [0, 1, 2, 3].map((i) => ({
+          seat: i,
+          name: '待开放',
+          isBot: true,
+          connected: false,
+          status: 'online' as const
+        }))
       };
 
       return Response.json(

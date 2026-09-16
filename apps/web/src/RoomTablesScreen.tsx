@@ -37,75 +37,37 @@ interface RoomTablesScreenProps {
   onChangeNameOrRoom: () => void;
 }
 
-export interface SeatDirectionMeta {
+interface SeatMeta {
   seat: number;
-  direction: 'north' | 'south' | 'west' | 'east';
-  chineseDir: string;
-  englishDir: string;
-  teamId: 0 | 1;
+  dir: 'north' | 'south' | 'west' | 'east';
+  label: string;
+  team: 'NS' | 'EW';
   teamName: string;
-  teamIcon: string;
   partnerSeat: number;
-  partnerDir: string;
 }
 
-// 掼蛋官方规范：
-// Seat 0 = 南 (South), 队 0 (南北搭档)
-// Seat 1 = 东 (East), 队 1 (东西搭档)
-// Seat 2 = 北 (North), 队 0 (南北搭档)
-// Seat 3 = 西 (West), 队 1 (东西搭档)
-export const SEAT_CONFIGS: Record<number, SeatDirectionMeta> = {
-  2: {
-    seat: 2,
-    direction: 'north',
-    chineseDir: '北',
-    englishDir: 'North',
-    teamId: 0,
-    teamName: '南北队',
-    teamIcon: '🛡️',
-    partnerSeat: 0,
-    partnerDir: '南'
-  },
-  0: {
-    seat: 0,
-    direction: 'south',
-    chineseDir: '南',
-    englishDir: 'South',
-    teamId: 0,
-    teamName: '南北队',
-    teamIcon: '🛡️',
-    partnerSeat: 2,
-    partnerDir: '北'
-  },
-  3: {
-    seat: 3,
-    direction: 'west',
-    chineseDir: '西',
-    englishDir: 'West',
-    teamId: 1,
-    teamName: '东西队',
-    teamIcon: '⚔️',
-    partnerSeat: 1,
-    partnerDir: '东'
-  },
-  1: {
-    seat: 1,
-    direction: 'east',
-    chineseDir: '东',
-    englishDir: 'East',
-    teamId: 1,
-    teamName: '东西队',
-    teamIcon: '⚔️',
-    partnerSeat: 3,
-    partnerDir: '西'
-  }
+// 掼蛋规范：
+// 0: 南 (South), 2: 北 (North) => 南北搭档 (NS)
+// 1: 东 (East),  3: 西 (West)  => 东西搭档 (EW)
+const SEAT_METAS: Record<number, SeatMeta> = {
+  2: { seat: 2, dir: 'north', label: '北', team: 'NS', teamName: '南北搭档', partnerSeat: 0 },
+  0: { seat: 0, dir: 'south', label: '南', team: 'NS', teamName: '南北搭档', partnerSeat: 2 },
+  3: { seat: 3, dir: 'west',  label: '西', team: 'EW', teamName: '东西搭档', partnerSeat: 1 },
+  1: { seat: 1, dir: 'east',  label: '东', team: 'EW', teamName: '东西搭档', partnerSeat: 3 }
 };
 
-const DEFAULT_SEATS: TableSeatInfo[] = [
+const DEFAULT_SEATS_1: TableSeatInfo[] = [
   { seat: 0, name: '机器人 1', isBot: true, connected: false, status: 'online' },
   { seat: 1, name: '机器人 2', isBot: true, connected: false, status: 'online' },
   { seat: 2, name: '机器人 3', isBot: true, connected: false, status: 'online' },
   { seat: 3, name: '机器人 4', isBot: true, connected: false, status: 'online' }
+];
+
+const DEFAULT_SEATS_2: TableSeatInfo[] = [
+  { seat: 0, name: '待开放', isBot: true, connected: false, status: 'online' },
+  { seat: 1, name: '待开放', isBot: true, connected: false, status: 'online' },
+  { seat: 2, name: '待开放', isBot: true, connected: false, status: 'online' },
+  { seat: 3, name: '待开放', isBot: true, connected: false, status: 'online' }
 ];
 
 export function RoomTablesScreen({
@@ -129,19 +91,19 @@ export function RoomTablesScreen({
       humanSeatsCount: 0,
       maxSeats: 4,
       status: 'empty',
-      seats: DEFAULT_SEATS
+      seats: DEFAULT_SEATS_1
     },
     {
       id: '2',
-      name: '2号桌 · 经典掼蛋',
-      type: 'guandan',
+      name: '2号桌 · 经典双升',
+      type: 'shuangsheng',
       gameActive: false,
       isFull: false,
       isMember: false,
       humanSeatsCount: 0,
       maxSeats: 4,
-      status: 'empty',
-      seats: DEFAULT_SEATS
+      status: 'developing',
+      seats: DEFAULT_SEATS_2
     }
   ]);
   const [loading, setLoading] = useState(false);
@@ -160,7 +122,7 @@ export function RoomTablesScreen({
         }
       }
     } catch {
-      // 忽略短暂网络波动
+      // 忽略网络波动
     } finally {
       setLoading(false);
     }
@@ -185,17 +147,12 @@ export function RoomTablesScreen({
         needsForcedRotation ? 'app-forced-landscape' : ''
       }`}
     >
-      {/* 顶部房间信息与全局操作条 */}
-      <div className="room-tables-header">
-        <div className="room-info-box">
-          <div className="room-badge-row">
-            <span className="room-symbol">🏡</span>
-            <h1 className="room-main-title">房间大厅</h1>
-            <span className="room-tag">房号: {room}</span>
-          </div>
-          <p className="room-player-welcome">
-            当前玩家: <strong className="player-highlight">{playerName}</strong>
-          </p>
+      {/* 极简顶部条 */}
+      <header className="room-tables-header minimal-header">
+        <div className="room-info-minimal">
+          <span className="room-symbol">🏡</span>
+          <span className="room-title-text">房间 {room}</span>
+          <span className="room-player-tag">玩家: <strong>{playerName}</strong></span>
         </div>
 
         <div className="room-header-btns">
@@ -213,29 +170,15 @@ export function RoomTablesScreen({
             {loading ? '⏳' : '🔄'}
           </button>
           <button className="icon-btn" onClick={onChangeNameOrRoom} title="更换昵称或房间">
-            ← 离开房间
+            ← 退出
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* 提示横幅：解释对家搭档机制与方向 */}
-      <div className="room-team-guide-banner">
-        <div className="guide-item">
-          <span className="guide-badge badge-team-ns">🛡️ 南北对家 (搭档)</span>
-          <span className="guide-text">南席 (0号) ↔ 北席 (2号)</span>
-        </div>
-        <div className="guide-divider">VS</div>
-        <div className="guide-item">
-          <span className="guide-badge badge-team-ew">⚔️ 东西对家 (搭档)</span>
-          <span className="guide-text">东席 (1号) ↔ 西席 (3号)</span>
-        </div>
-        <span className="guide-tip-hint">👉 点击桌边空椅子即可精准挑选对家入座</span>
-      </div>
-
-      {/* 牌桌列表区（1号桌 与 2号桌 东南西北布局） */}
-      <div className="tables-list-container">
+      {/* 1号桌与2号桌：极简东南西北桌面 */}
+      <main className="tables-list-container minimal-tables-grid">
         {tables.map((table) => (
-          <DirectionalTableCard
+          <MinimalTableArena
             key={table.id}
             table={table}
             myPlayerId={myPlayerId}
@@ -243,14 +186,7 @@ export function RoomTablesScreen({
             onShowToast={showToast}
           />
         ))}
-      </div>
-
-      {/* 底部提示 */}
-      <div className="room-tables-footer">
-        <p className="room-rule-note">
-          💡 掼蛋 2v2 核心机制：坐对面的玩家为搭档，顺时针出牌。若想与朋友联手，请点击其对面方向的空椅子入座！
-        </p>
-      </div>
+      </main>
 
       {/* 浮动轻提示 */}
       {toastMsg && <div className="room-tables-toast">{toastMsg}</div>}
@@ -258,163 +194,122 @@ export function RoomTablesScreen({
   );
 }
 
-interface DirectionalTableCardProps {
+interface MinimalTableArenaProps {
   table: TableInfo;
   myPlayerId: string;
   onSelectTable: (tableId: string, seat?: number) => void;
   onShowToast: (msg: string) => void;
 }
 
-function DirectionalTableCard({
+function MinimalTableArena({
   table,
   myPlayerId,
   onSelectTable,
   onShowToast
-}: DirectionalTableCardProps) {
-  const isLocked = Boolean((table.isFull || table.gameActive) && !table.isMember);
-  const seats = table.seats ?? DEFAULT_SEATS;
+}: MinimalTableArenaProps) {
+  const isDeveloping = table.type === 'shuangsheng' || table.status === 'developing';
+  const isLocked = !isDeveloping && Boolean((table.isFull || table.gameActive) && !table.isMember);
+  const seats = table.seats ?? (isDeveloping ? DEFAULT_SEATS_2 : DEFAULT_SEATS_1);
 
-  // 检查当前玩家是否已入座本桌
   const mySeat = seats.find((s) => s.playerId === myPlayerId && !s.isBot);
-  const mySeatMeta = mySeat !== undefined ? SEAT_CONFIGS[mySeat.seat] : undefined;
+  const mySeatMeta = mySeat !== undefined ? SEAT_METAS[mySeat.seat] : undefined;
 
-  const renderChair = (cfg: SeatDirectionMeta) => {
+  const handleSeatClick = (cfg: SeatMeta) => {
+    if (isDeveloping) {
+      onShowToast('♠️ 2号桌 · 经典双升正在全力研发中，敬请期待！');
+      return;
+    }
+
+    const seatData = seats.find((s) => s.seat === cfg.seat);
+    const hasHuman = Boolean(seatData && !seatData.isBot && seatData.playerId);
+    const isMe = Boolean(hasHuman && seatData?.playerId === myPlayerId);
+
+    if (isMe) {
+      onSelectTable(table.id, cfg.seat);
+      return;
+    }
+    if (isLocked) {
+      onShowToast('⚠️ 该桌对局正在进行且已满员锁定');
+      return;
+    }
+    if (hasHuman) {
+      onShowToast(`🪑 该位置已有玩家【${seatData?.name}】入座`);
+      return;
+    }
+    onSelectTable(table.id, cfg.seat);
+  };
+
+  const handleQuickJoin = () => {
+    if (isDeveloping) {
+      onShowToast('♠️ 2号桌 · 经典双升研发中，敬请期待！');
+      return;
+    }
+    if (table.isMember && mySeatMeta) {
+      onSelectTable(table.id, mySeatMeta.seat);
+    } else {
+      onSelectTable(table.id);
+    }
+  };
+
+  const renderSeat = (cfg: SeatMeta) => {
     const seatData = seats.find((s) => s.seat === cfg.seat);
     const partnerData = seats.find((s) => s.seat === cfg.partnerSeat);
 
-    const hasHuman = Boolean(seatData && !seatData.isBot && seatData.playerId);
+    const hasHuman = !isDeveloping && Boolean(seatData && !seatData.isBot && seatData.playerId);
     const isMe = Boolean(hasHuman && seatData?.playerId === myPlayerId);
-    const hasPartnerHuman = Boolean(partnerData && !partnerData.isBot && partnerData.playerId);
+    const hasPartner = !isDeveloping && Boolean(partnerData && !partnerData.isBot && partnerData.playerId);
 
-    const isAvailable = !hasHuman && !isLocked;
-    const isTeamNS = cfg.teamId === 0;
-
-    const handleChairClick = () => {
-      if (isMe) {
-        // 重回我自己的席位
-        onSelectTable(table.id, cfg.seat);
-        return;
-      }
-      if (isLocked) {
-        onShowToast('⚠️ 该桌对局正在进行且已满员锁定，无法入座');
-        return;
-      }
-      if (hasHuman) {
-        onShowToast(`🪑 该席位已被玩家【${seatData?.name}】入座，请选择其他空座`);
-        return;
-      }
-      // 空闲席位或机器人席位：直接入座该席位
-      onSelectTable(table.id, cfg.seat);
-    };
+    const isAvailable = !isDeveloping && !hasHuman && !isLocked;
 
     return (
       <div
         key={cfg.seat}
-        className={`chair-node chair-${cfg.direction} ${isTeamNS ? 'team-ns' : 'team-ew'} ${
-          isMe ? 'chair-me' : hasHuman ? 'chair-occupied' : 'chair-vacant'
-        } ${isAvailable ? 'chair-clickable' : ''}`}
-        onClick={handleChairClick}
+        className={`minimal-seat seat-${cfg.dir} seat-team-${cfg.team.toLowerCase()} ${
+          isMe ? 'seat-me' : hasHuman ? 'seat-occupied' : 'seat-vacant'
+        } ${isAvailable ? 'seat-clickable' : ''}`}
+        onClick={() => handleSeatClick(cfg)}
         title={
-          isMe
-            ? '这是您的席位，点击回到对局'
-            : isAvailable
-              ? `点击入座 ${cfg.chineseDir}席（成为 ${cfg.teamName}）`
-              : hasHuman
-                ? `已入座：${seatData?.name}`
-                : '桌子已锁定'
+          isDeveloping
+            ? '研发中'
+            : isMe
+              ? '您的席位，点击返回'
+              : isAvailable
+                ? `点击入座 ${cfg.label}席 (${cfg.teamName})`
+                : hasHuman
+                  ? `已入座: ${seatData?.name}`
+                  : ''
         }
       >
-        {/* 椅子顶部方向与战队标记 */}
-        <div className="chair-header-row">
-          <span className="chair-dir-badge">
-            {cfg.chineseDir} ({cfg.englishDir})
-          </span>
-          <span className="chair-team-pill">
-            {cfg.teamIcon} {cfg.teamName}
-          </span>
+        <div className="seat-dir-tag">
+          <span className="dir-name">{cfg.label}</span>
+          <span className={`team-dot dot-${cfg.team.toLowerCase()}`} />
         </div>
 
-        {/* 椅子主体内容：玩家/空位信息 */}
-        <div className="chair-body">
-          <div className="chair-avatar-wrap">
-            {isMe ? (
-              <span className="chair-avatar avatar-me">👑</span>
-            ) : hasHuman ? (
-              <span className="chair-avatar avatar-human">👤</span>
-            ) : (
-              <span className="chair-avatar avatar-empty">🪑</span>
-            )}
-            {hasHuman && (
+        <div className="seat-user-info">
+          {isDeveloping ? (
+            <span className="seat-placeholder">待开放</span>
+          ) : isMe ? (
+            <div className="seat-human-row">
+              <span className="seat-name-text me-text">{seatData?.name}</span>
+              <span className="me-pill">我</span>
+            </div>
+          ) : hasHuman ? (
+            <div className="seat-human-row">
+              <span className="seat-name-text">{seatData?.name}</span>
               <span
-                className={`chair-status-dot ${
+                className={`status-mini-dot ${
                   seatData?.status === 'offline'
                     ? 'dot-offline'
-                    : seatData?.status === 'left'
-                      ? 'dot-left'
-                      : seatData?.connected
-                        ? 'dot-online'
-                        : 'dot-offline'
+                    : seatData?.connected
+                      ? 'dot-online'
+                      : 'dot-offline'
                 }`}
-                title={
-                  seatData?.status === 'offline'
-                    ? '离线/掉线'
-                    : seatData?.status === 'left'
-                      ? '已离开'
-                      : '在线'
-                }
               />
-            )}
-          </div>
-
-          <div className="chair-text-info">
-            {isMe ? (
-              <div className="chair-name chair-name-me">
-                <span>{seatData?.name}</span>
-                <span className="me-badge">我</span>
-              </div>
-            ) : hasHuman ? (
-              <div className="chair-name">
-                <span>{seatData?.name}</span>
-              </div>
-            ) : (
-              <div className="chair-vacant-label">
-                <span>空位 (机器人替补)</span>
-              </div>
-            )}
-
-            {/* 对家关系智能提示 */}
-            <div className="chair-sub-tip">
-              {isMe ? (
-                <span className="tip-partner-info">
-                  {hasPartnerHuman ? `搭档：${partnerData?.name}` : `对家搭档待入座`}
-                </span>
-              ) : hasHuman ? (
-                <span className="tip-seated-info">
-                  {seatData?.connected ? '🟢 在线就绪' : '🔴 暂时离线'}
-                </span>
-              ) : hasPartnerHuman ? (
-                <span className="tip-partner-invite">
-                  🤝 与<strong>【{partnerData?.name}】</strong>搭档
-                </span>
-              ) : (
-                <span className="tip-click-join">👈 点击入座此席</span>
-              )}
             </div>
-          </div>
-        </div>
-
-        {/* 底部交互状态按钮条 */}
-        <div className="chair-action-bar">
-          {isMe ? (
-            <span className="chair-btn btn-rejoin">▶️ 回到座位</span>
-          ) : isAvailable ? (
-            <span className="chair-btn btn-claim">
-              {hasPartnerHuman ? '🪑 入座对家' : '🪑 点击入座'}
-            </span>
-          ) : hasHuman ? (
-            <span className="chair-btn btn-occupied">已入座</span>
+          ) : hasPartner ? (
+            <span className="seat-partner-invite">🤝 搭档 {partnerData?.name}</span>
           ) : (
-            <span className="chair-btn btn-locked">锁定</span>
+            <span className="seat-empty-text">+ 入座</span>
           )}
         </div>
       </div>
@@ -422,113 +317,89 @@ function DirectionalTableCard({
   };
 
   return (
-    <div className={`table-entry-card table-guandan ${isLocked ? 'table-card-locked' : ''}`}>
-      {/* 牌桌卡片头部：桌号与状态 */}
-      <div className="table-card-header">
-        <div className="table-title-area">
-          <span className="table-emblem">🎴</span>
-          <div>
-            <div className="table-title-row">
-              <h2 className="table-name">{table.name}</h2>
-              <span className="table-capacity-pill">4人桌 (2v2)</span>
-            </div>
-            <p className="table-desc">经典淮安掼蛋 · 顺时针出牌 · 南北搭档 ⚔️ 东西搭档</p>
-          </div>
-        </div>
+    <div className={`minimal-table-card ${isDeveloping ? 'card-developing' : ''}`}>
+      {/* 东南西北真实方桌布局，1/2号桌标志卡片位于正中央 */}
+      <div className="minimal-felt-table">
+        {/* 北席 (Top, Seat 2) */}
+        {renderSeat(SEAT_METAS[2]!)}
 
-        {/* 状态徽章 */}
-        <div className="table-status-area">
-          {table.gameActive ? (
-            <span className="status-badge badge-playing">
-              <span className="badge-pulse-dot dot-red" />
-              对局进行中 ({table.humanSeatsCount}/4)
-            </span>
-          ) : table.humanSeatsCount >= 4 ? (
-            <span className="status-badge badge-full">
-              <span className="badge-pulse-dot dot-yellow" />
-              已满员 (4/4)
-            </span>
-          ) : table.humanSeatsCount > 0 ? (
-            <span className="status-badge badge-waiting">
-              <span className="badge-pulse-dot dot-green" />
-              组队中 ({table.humanSeatsCount}/4)
-            </span>
-          ) : (
-            <span className="status-badge badge-empty">
-              <span className="badge-pulse-dot dot-green" />
-              空闲桌 (随时开局)
+        {/* 西席 (Left, Seat 3) */}
+        {renderSeat(SEAT_METAS[3]!)}
+
+        {/* 桌子中央标志卡片 (用户指定：1号桌与2号桌的标志卡片在桌子中央) */}
+        <div
+          className={`table-center-badge-card ${isDeveloping ? 'center-developing' : ''}`}
+          onClick={handleQuickJoin}
+        >
+          <div className="center-card-top">
+            <span className="center-card-emblem">{isDeveloping ? '♠️' : '🎴'}</span>
+            <span className="center-card-title">{table.name}</span>
+          </div>
+
+          <div className="center-card-status">
+            {isDeveloping ? (
+              <span className="center-status-tag tag-developing">🚧 开发中 · 敬请期待</span>
+            ) : table.gameActive ? (
+              <span className="center-status-tag tag-playing">
+                <span className="pulse-dot-red" />
+                激战中 ({table.humanSeatsCount}/4)
+              </span>
+            ) : table.humanSeatsCount >= 4 ? (
+              <span className="center-status-tag tag-full">已满员 (4/4)</span>
+            ) : table.humanSeatsCount > 0 ? (
+              <span className="center-status-tag tag-waiting">
+                <span className="pulse-dot-green" />
+                组队中 ({table.humanSeatsCount}/4)
+              </span>
+            ) : (
+              <span className="center-status-tag tag-empty">🟢 空闲可入座</span>
+            )}
+          </div>
+
+          {!isDeveloping && (
+            <span className="center-card-hint">
+              {table.isMember ? '▶️ 点击回到对局' : '点击空位自主挑选对家'}
             </span>
           )}
         </div>
-      </div>
-
-      {/* 东南西北真实方桌竞技场视图 */}
-      <div className="table-felt-arena">
-        {/* 北席 (Top, Seat 2) */}
-        {renderChair(SEAT_CONFIGS[2]!)}
-
-        {/* 西席 (Left, Seat 3) */}
-        {renderChair(SEAT_CONFIGS[3]!)}
-
-        {/* 中央绿呢方桌台面 */}
-        <div className="felt-table-surface">
-          {/* 十字连线：南北搭档线 & 东西搭档线 */}
-          <div className="felt-crossline felt-line-ns" title="南北对家搭档线">
-            <span className="crossline-label">南北对家 🛡️</span>
-          </div>
-          <div className="felt-crossline felt-line-ew" title="东西对家搭档线">
-            <span className="crossline-label">东西对家 ⚔️</span>
-          </div>
-
-          {/* 牌桌中央徽章 */}
-          <div className="felt-center-emblem">
-            <span className="felt-table-badge">{table.name.slice(0, 3)}</span>
-            <span className="felt-sub-text">绿呢牌桌</span>
-            <span className="felt-mode-pill">经典掼蛋</span>
-          </div>
-        </div>
 
         {/* 东席 (Right, Seat 1) */}
-        {renderChair(SEAT_CONFIGS[1]!)}
+        {renderSeat(SEAT_METAS[1]!)}
 
         {/* 南席 (Bottom, Seat 0) */}
-        {renderChair(SEAT_CONFIGS[0]!)}
+        {renderSeat(SEAT_METAS[0]!)}
       </div>
 
-      {/* 底部快速操作栏 */}
-      <div className="table-card-footer">
-        {isLocked ? (
-          <div className="locked-warning-box">
-            <span className="locked-warning-text">
-              ⚠️ 本桌游戏已开始且满员（4人锁定），第 5 人无法加入。请选择另一桌或等待对局结束。
-            </span>
-            <button
-              type="button"
-              className="table-action-btn btn-locked"
-              disabled
-              title="游戏已满员进行中"
-            >
-              🚫 满员进行中
-            </button>
-          </div>
+      {/* 桌底快速入座操作条 */}
+      <div className="minimal-table-footer">
+        {isDeveloping ? (
+          <button
+            type="button"
+            className="minimal-action-btn btn-dev-disabled"
+            onClick={() => onShowToast('♠️ 经典双升（拖拉机）即将发布，敬请期待！')}
+          >
+            ⏳ 双升玩法研发中
+          </button>
+        ) : isLocked ? (
+          <button type="button" className="minimal-action-btn btn-full-locked" disabled>
+            🔒 本桌对局满员进行中
+          </button>
         ) : table.isMember && mySeatMeta ? (
           <button
             type="button"
-            className="primary-action-btn pulse-glow table-action-btn"
-            onClick={() => onSelectTable(table.id, mySeatMeta.seat)}
+            className="minimal-action-btn btn-rejoin-primary"
+            onClick={handleQuickJoin}
           >
-            🃏 继续我的对局 (坐在 {mySeatMeta.chineseDir}席 · {mySeatMeta.teamName}) →
+            🃏 继续我的对局 (坐{mySeatMeta.label}席) →
           </button>
         ) : (
-          <div className="table-join-actions">
-            <button
-              type="button"
-              className="primary-action-btn pulse-glow table-action-btn"
-              onClick={() => onSelectTable(table.id)}
-            >
-              🎲 快速入座 (自动选座) →
-            </button>
-          </div>
+          <button
+            type="button"
+            className="minimal-action-btn btn-quick-join"
+            onClick={handleQuickJoin}
+          >
+            🎲 快速入座 (自动分配席位) →
+          </button>
         )}
       </div>
     </div>
