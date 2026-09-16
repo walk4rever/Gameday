@@ -598,6 +598,123 @@ button:active {
   }
 }
 
+/* 进贡/还贡实时交互提示栏 */
+.tribute-interactive-banner {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 12px 2px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(180, 83, 9, 0.42));
+  border: 1.5px solid rgba(245, 158, 11, 0.65);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 12px rgba(245, 158, 11, 0.2);
+  animation: bannerFadeIn 0.35s ease-out;
+  z-index: 10;
+  backdrop-filter: blur(8px);
+}
+
+.tribute-interactive-banner.stage-return {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28), rgba(5, 150, 105, 0.42));
+  border-color: rgba(52, 211, 153, 0.65);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.tribute-interactive-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  animation: tributeBounce 1.6s infinite ease-in-out;
+}
+
+@keyframes tributeBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15) translateY(-2px); }
+}
+
+.tribute-interactive-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tribute-interactive-text {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.35;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.tribute-interactive-text strong {
+  color: #fef08a;
+  font-weight: 800;
+}
+
+.tribute-interactive-banner.stage-return .tribute-interactive-text strong {
+  color: #a7f3d0;
+}
+
+/* 进贡专属按钮栏与等待胶囊 */
+.tribute-action-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.tribute-btn-recommend {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.45)) !important;
+  border: 1px solid rgba(245, 158, 11, 0.6) !important;
+  color: #fef08a !important;
+  font-weight: 700 !important;
+}
+
+.tribute-btn-confirm {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.45) !important;
+}
+
+.tribute-waiting-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.84rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.tribute-waiting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+  animation: waitingPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes waitingPulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* 进贡/还贡卡牌角标 */
+.card-badge-tribute {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.5);
+  animation: wild-sheen 1.5s infinite alternate;
+}
+
 .top-bar-controls {
   display: flex;
   gap: 4px;

@@ -3,7 +3,11 @@ import {
   findReturnCard,
   findTributeCard,
   getTributeCardValue,
-  resolveTribute
+  resolveTribute,
+  getLegalTributeCards,
+  validateTributeCard,
+  getLegalReturnCards,
+  validateReturnCard
 } from '../src/tribute.js';
 import type { Card, Rank } from '../src/types.js';
 import { card } from './helpers.js';
@@ -135,5 +139,68 @@ describe('掼蛋进贡、还贡与抗贡规则（Tribute & Anti-Tribute）', () 
     expect(result.type).toBe('none');
     expect(result.exchanges).toHaveLength(0);
     expect(result.nextStartSeat).toBe(0);
+  });
+
+  it('进贡合法牌筛选与验证：多张最大牌均可选，红桃级牌(逢人配)不可进贡，非最大牌不可进贡', () => {
+    const hand: Card[] = [
+      card('joker', 'small_joker'),
+      card('spade', 'small_joker'), // 第二张小王
+      card('heart', '2'),           // 逢人配
+      card('spade', '2'),           // 级牌
+      card('spade', 'A'),
+      card('club', '4')
+    ];
+
+    const legal = getLegalTributeCards(hand, level);
+    expect(legal).toHaveLength(2);
+    expect(legal.every((c) => c.rank === 'small_joker')).toBe(true);
+
+    // 选小王合法
+    expect(validateTributeCard(hand[0]!, hand, level).ok).toBe(true);
+    expect(validateTributeCard(hand[1]!, hand, level).ok).toBe(true);
+
+    // 选逢人配被拒
+    const wildRes = validateTributeCard(hand[2]!, hand, level);
+    expect(wildRes.ok).toBe(false);
+    if (!wildRes.ok) expect(wildRes.error).toContain('逢人配');
+
+    // 选普通级牌被拒（因为有更大牌小王）
+    const levelRes = validateTributeCard(hand[3]!, hand, level);
+    expect(levelRes.ok).toBe(false);
+    if (!levelRes.ok) expect(levelRes.error).toContain('最大的非逢人配牌');
+  });
+
+  it('还贡合法牌筛选与验证：必须 <= 10 且非级牌、非王牌', () => {
+    const hand: Card[] = [
+      card('joker', 'big_joker'),
+      card('diamond', '2'), // 级牌
+      card('spade', 'K'),
+      card('spade', '10'),
+      card('club', '7'),
+      card('heart', '3')
+    ];
+
+    const legal = getLegalReturnCards(hand, level);
+    expect(legal.map((c) => c.rank).sort()).toEqual(['10', '3', '7']);
+
+    // 选 3、7、10 合法
+    expect(validateReturnCard(hand[3]!, hand, level).ok).toBe(true);
+    expect(validateReturnCard(hand[4]!, hand, level).ok).toBe(true);
+    expect(validateReturnCard(hand[5]!, hand, level).ok).toBe(true);
+
+    // 选大王被拒
+    const jokerRes = validateReturnCard(hand[0]!, hand, level);
+    expect(jokerRes.ok).toBe(false);
+    if (!jokerRes.ok) expect(jokerRes.error).toContain('大小王');
+
+    // 选级牌被拒
+    const levelRes = validateReturnCard(hand[1]!, hand, level);
+    expect(levelRes.ok).toBe(false);
+    if (!levelRes.ok) expect(levelRes.error).toContain('级牌');
+
+    // 选 K 被拒（超过 10）
+    const kRes = validateReturnCard(hand[2]!, hand, level);
+    expect(kRes.ok).toBe(false);
+    if (!kRes.ok) expect(kRes.error).toContain('10');
   });
 });

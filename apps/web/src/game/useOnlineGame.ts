@@ -192,11 +192,14 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
       })(),
       paused: state.paused ?? null,
       tribute: state.tribute ?? null,
+      tributePhase: state.tributePhase ?? null,
       error,
       clearError: () => setError(null),
       playSelected: (cards) => send({ type: 'play', cardIds: cards.map((c) => c.id) }),
       pass: () => send({ type: 'pass' }),
       restart: () => send({ type: 'restart' }),
+      payTribute: (cardId: string) => send({ type: 'pay_tribute', cardId }),
+      returnTribute: (cardId: string) => send({ type: 'return_tribute', cardId }),
       delegateBot,
       dissolve
     };

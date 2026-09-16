@@ -12,6 +12,8 @@ export type ClientMessage =
   | { type: 'play'; cardIds: string[] }
   | { type: 'pass' }
   | { type: 'restart' }
+  | { type: 'pay_tribute'; cardId: string }
+  | { type: 'return_tribute'; cardId: string }
   | { type: 'leave' }
   | { type: 'ping' }
   | { type: 'delegate_bot'; seat: Seat }
@@ -52,6 +54,20 @@ export interface PausedInfo {
   reason: 'offline' | 'left';
 }
 
+export interface TributeExchangeState {
+  fromSeat: Seat;
+  toSeat: Seat;
+  tributeCard?: Card | undefined;
+  returnCard?: Card | undefined;
+}
+
+export interface TributePhaseInfo {
+  type: 'single' | 'double';
+  stage: 'pay' | 'return';
+  waitingSeats: Seat[];
+  exchanges: TributeExchangeState[];
+}
+
 export interface StateMessage {
   type: 'state';
   /** 只有自己能看到自己的手牌，其他座位只有 handCount，见 RULES_SPEC.md 服务端权威原则 */
@@ -69,6 +85,7 @@ export interface StateMessage {
     type: 'none' | 'anti_tribute' | 'single' | 'double';
     description: string;
   } | null;
+  tributePhase?: TributePhaseInfo | null;
 }
 
 export interface ErrorMessage {

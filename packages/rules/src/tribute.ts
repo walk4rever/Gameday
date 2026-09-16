@@ -79,6 +79,109 @@ export function findReturnCard(hand: Card[], level: Rank): Card {
   });
 }
 
+/** 获取手中所有符合规则的进贡候选牌（最大的非逢人配牌，若有多张同点数牌均可选择） */
+export function getLegalTributeCards(hand: Card[], level: Rank): Card[] {
+  if (hand.length === 0) return [];
+  const nonWild = hand.filter((c) => !isWildcard(c, level));
+  const pool = nonWild.length > 0 ? nonWild : hand;
+  const maxVal = Math.max(...pool.map((c) => getTributeCardValue(c, level)));
+  return pool.filter((c) => getTributeCardValue(c, level) === maxVal);
+}
+
+/** 校验选择的进贡牌是否符合掼蛋规则 */
+export function validateTributeCard(
+  card: Card,
+  hand: Card[],
+  level: Rank
+): { ok: true } | { ok: false; error: string } {
+  const inHand = hand.some((c) => c.id === card.id);
+  if (!inHand) {
+    return { ok: false, error: '该牌不在手牌中' };
+  }
+  const hasNonWild = hand.some((c) => !isWildcard(c, level));
+  if (hasNonWild && isWildcard(card, level)) {
+    return { ok: false, error: '逢人配（红桃级牌）受规则保护，不可作为进贡牌' };
+  }
+  const legalCards = getLegalTributeCards(hand, level);
+  const isLegal = legalCards.some((c) => c.id === card.id);
+  if (!isLegal) {
+    const highestName = legalCards[0] ? formatCardName(legalCards[0]) : '';
+    return {
+      ok: false,
+      error: `进贡牌必须是手中最大的非逢人配牌${highestName ? `（如【${highestName}】）` : ''}`
+    };
+  }
+  return { ok: true };
+}
+
+/** 获取手中所有符合规则的还贡候选牌（<= 10 的非级牌、非王牌；若无则为非王牌或任意最小牌） */
+export function getLegalReturnCards(hand: Card[], level: Rank): Card[] {
+  if (hand.length === 0) return [];
+  const ranksUnder10 = new Set<Rank>(['2', '3', '4', '5', '6', '7', '8', '9', '10']);
+  const eligible = hand.filter(
+    (c) =>
+      c.rank !== 'big_joker' &&
+      c.rank !== 'small_joker' &&
+      c.rank !== level &&
+      ranksUnder10.has(c.rank)
+  );
+  if (eligible.length > 0) return eligible;
+
+  const nonJokers = hand.filter((c) => c.rank !== 'big_joker' && c.rank !== 'small_joker');
+  return nonJokers.length > 0 ? nonJokers : hand;
+}
+
+/** 校验选择的还贡牌是否符合掼蛋规则 */
+export function validateReturnCard(
+  card: Card,
+  hand: Card[],
+  level: Rank
+): { ok: true } | { ok: false; error: string } {
+  const inHand = hand.some((c) => c.id === card.id);
+  if (!inHand) {
+    return { ok: false, error: '该牌不在手牌中' };
+  }
+  const legalCards = getLegalReturnCards(hand, level);
+  const ranksUnder10 = new Set<Rank>(['2', '3', '4', '5', '6', '7', '8', '9', '10']);
+  const hasStandardEligible = hand.some(
+    (c) =>
+      c.rank !== 'big_joker' &&
+      c.rank !== 'small_joker' &&
+      c.rank !== level &&
+      ranksUnder10.has(c.rank)
+  );
+
+  if (hasStandardEligible) {
+    if (card.rank === 'big_joker' || card.rank === 'small_joker') {
+      return { ok: false, error: '大小王不能作为还贡牌' };
+    }
+    if (card.rank === level) {
+      return { ok: false, error: '级牌不能作为还贡牌' };
+    }
+    if (!ranksUnder10.has(card.rank)) {
+      return { ok: false, error: '还贡牌点数不能超过 10' };
+    }
+  }
+
+  const isLegal = legalCards.some((c) => c.id === card.id);
+  if (!isLegal) {
+    return { ok: false, error: '该牌不符合还贡规则' };
+  }
+  return { ok: true };
+}
+
+/** 智能推荐进贡牌 */
+export function recommendTributeCard(hand: Card[], level: Rank): Card | null {
+  if (hand.length === 0) return null;
+  return findTributeCard(hand, level);
+}
+
+/** 智能推荐还贡牌（优先点数最小的合法还贡牌） */
+export function recommendReturnCard(hand: Card[], level: Rank): Card | null {
+  if (hand.length === 0) return null;
+  return findReturnCard(hand, level);
+}
+
 /**
  * 结算并执行进贡与还贡：
  * 1. 检查上一局输赢情况（双下、单下、平局）；

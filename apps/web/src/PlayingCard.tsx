@@ -8,6 +8,7 @@ export interface PlayingCardProps {
   selected?: boolean;
   hinted?: boolean;
   disabled?: boolean;
+  tributeBadge?: string | undefined;
   onClick?: () => void;
   onPointerDown?: (e: PointerEvent<HTMLButtonElement>) => void;
   onPointerEnter?: (e: PointerEvent<HTMLButtonElement>) => void;
@@ -322,6 +323,7 @@ export function PlayingCard({
   selected,
   hinted,
   disabled,
+  tributeBadge,
   onClick,
   onPointerDown,
   onPointerEnter,
@@ -356,8 +358,12 @@ export function PlayingCard({
       disabled={disabled}
       data-card-id={card.id}
     >
-      {/* 级牌 / 逢人配右上角专属勋章 */}
-      {isWild ? (
+      {/* 级牌 / 逢人配 / 进贡候选专属勋章 */}
+      {tributeBadge ? (
+        <span className="card-badge card-badge-tribute" title={tributeBadge}>
+          {tributeBadge}
+        </span>
+      ) : isWild ? (
         <span className="card-badge card-badge-wild" title="逢人配（百搭万能牌）">
           ★ 配
         </span>

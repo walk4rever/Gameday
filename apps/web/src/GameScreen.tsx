@@ -2,7 +2,16 @@ import { getRankedHintPlays } from '@guandan/bot';
 import type { Seat } from '@guandan/engine';
 import type { SeatTrickAction } from '@guandan/protocol';
 import type { Card, Play } from '@guandan/rules';
-import { classifyPlay } from '@guandan/rules';
+import {
+  classifyPlay,
+  formatCardName,
+  getLegalReturnCards,
+  getLegalTributeCards,
+  recommendReturnCard,
+  recommendTributeCard,
+  validateReturnCard,
+  validateTributeCard
+} from '@guandan/rules';
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -454,6 +463,117 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
     [selectedCards, opponentLastPlay, level]
   );
 
+  // 进贡 / 还贡阶段交互状态
+  const tributePhase = game.tributePhase;
+  const isTributeActive = Boolean(tributePhase);
+  const [tributeError, setTributeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isTributeActive) {
+      setTributeError(null);
+    }
+  }, [isTributeActive]);
+
+  const myPayExchange = useMemo(() => {
+    if (!tributePhase || tributePhase.stage !== 'pay') return null;
+    return tributePhase.exchanges.find((ex) => ex.fromSeat === humanSeat && !ex.tributeCard) ?? null;
+  }, [tributePhase, humanSeat]);
+
+  const myReturnExchange = useMemo(() => {
+    if (!tributePhase || tributePhase.stage !== 'return') return null;
+    return tributePhase.exchanges.find((ex) => ex.toSeat === humanSeat && !ex.returnCard) ?? null;
+  }, [tributePhase, humanSeat]);
+
+  const isMyPayTurn = Boolean(myPayExchange);
+  const isMyReturnTurn = Boolean(myReturnExchange);
+  const isMyTributeTurn = isMyPayTurn || isMyReturnTurn;
+
+  const tributeTargetName = useMemo(() => {
+    if (myPayExchange) {
+      return seats.find((s) => s.seat === myPayExchange.toSeat)?.name ?? `座位 ${myPayExchange.toSeat + 1}`;
+    }
+    if (myReturnExchange) {
+      return seats.find((s) => s.seat === myReturnExchange.fromSeat)?.name ?? `座位 ${myReturnExchange.fromSeat + 1}`;
+    }
+    return '';
+  }, [myPayExchange, myReturnExchange, seats]);
+
+  const legalTributeCards = useMemo(() => {
+    if (!isMyPayTurn) return [];
+    return getLegalTributeCards(hand, level);
+  }, [isMyPayTurn, hand, level]);
+
+  const recommendedTribute = useMemo(() => {
+    if (!isMyPayTurn) return null;
+    return recommendTributeCard(hand, level);
+  }, [isMyPayTurn, hand, level]);
+
+  const legalReturnCards = useMemo(() => {
+    if (!isMyReturnTurn) return [];
+    return getLegalReturnCards(hand, level);
+  }, [isMyReturnTurn, hand, level]);
+
+  const recommendedReturn = useMemo(() => {
+    if (!isMyReturnTurn) return null;
+    return recommendReturnCard(hand, level);
+  }, [isMyReturnTurn, hand, level]);
+
+  const handleSmartTributeRecommend = () => {
+    if (isMyPayTurn && recommendedTribute) {
+      setSelectedIds(new Set([recommendedTribute.id]));
+      setTributeError(null);
+      sound.cardSelect();
+      sound.haptic('selection');
+    } else if (isMyReturnTurn && recommendedReturn) {
+      setSelectedIds(new Set([recommendedReturn.id]));
+      setTributeError(null);
+      sound.cardSelect();
+      sound.haptic('selection');
+    }
+  };
+
+  const handleConfirmPayTribute = () => {
+    if (!isMyPayTurn) return;
+    if (selectedCards.length !== 1) {
+      setTributeError('请选择一张牌进行进贡');
+      sound.haptic('error');
+      return;
+    }
+    const chosen = selectedCards[0]!;
+    const validation = validateTributeCard(chosen, hand, level);
+    if (!validation.ok) {
+      setTributeError(validation.error);
+      sound.haptic('error');
+      return;
+    }
+    setTributeError(null);
+    setSelectedIds(new Set());
+    sound.cardPlay();
+    sound.haptic('medium');
+    game.payTribute(chosen.id);
+  };
+
+  const handleConfirmReturnTribute = () => {
+    if (!isMyReturnTurn) return;
+    if (selectedCards.length !== 1) {
+      setTributeError('请选择一张牌进行还贡');
+      sound.haptic('error');
+      return;
+    }
+    const chosen = selectedCards[0]!;
+    const validation = validateReturnCard(chosen, hand, level);
+    if (!validation.ok) {
+      setTributeError(validation.error);
+      sound.haptic('error');
+      return;
+    }
+    setTributeError(null);
+    setSelectedIds(new Set());
+    sound.cardPlay();
+    sound.haptic('medium');
+    game.returnTribute(chosen.id);
+  };
+
   const toggleCard = (cardId: string) => {
     if (!isHumanTurn || roundOver) return;
     game.clearError();
@@ -475,6 +595,14 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
 
   // 滑动选择支持
   const handlePointerDown = (cardId: string) => {
+    if (isTributeActive) {
+      if (!isMyTributeTurn) return;
+      setSelectedIds(new Set([cardId]));
+      setTributeError(null);
+      sound.cardSelect();
+      sound.haptic('selection');
+      return;
+    }
     if (!isHumanTurn || roundOver) return;
     setIsDragging(true);
     dragVisitedIdsRef.current = new Set([cardId]);
@@ -482,7 +610,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || !isHumanTurn || roundOver) return;
+    if (isTributeActive || !isDragging || !isHumanTurn || roundOver) return;
     const element = document.elementFromPoint(e.clientX, e.clientY);
     const cardElement = element?.closest('[data-card-id]') as HTMLElement | null;
     const cardId = cardElement?.dataset.cardId;
@@ -593,8 +721,40 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         </div>
       </div>
 
-      {/* 进贡 / 抗贡事件广播横幅 */}
-      {game.tribute && game.tribute.type !== 'none' && !roundOver && (
+      {/* 进贡 / 还贡阶段实时交互提示栏 */}
+      {isTributeActive && tributePhase && (
+        <div className={`tribute-interactive-banner stage-${tributePhase.stage}`}>
+          <span className="tribute-interactive-icon">
+            {tributePhase.stage === 'pay' ? '👑' : '🎁'}
+          </span>
+          <div className="tribute-interactive-content">
+            {isMyPayTurn ? (
+              <span className="tribute-interactive-text">
+                <strong>请选择手中最大的牌进贡</strong> 给【{tributeTargetName}】（已为你高亮候选牌）
+              </span>
+            ) : isMyReturnTurn ? (
+              <span className="tribute-interactive-text">
+                已收到【{tributeTargetName}】进贡的【
+                {myReturnExchange?.tributeCard ? formatCardName(myReturnExchange.tributeCard) : '大牌'}
+                】，<strong>请选择一张不超过 10 的牌还贡</strong>
+              </span>
+            ) : (
+              <span className="tribute-interactive-text">
+                {tributePhase.stage === 'pay'
+                  ? `进贡环节：正在等待【${tributePhase.waitingSeats
+                      .map((s) => seats.find((item) => item.seat === s)?.name ?? `座位 ${s + 1}`)
+                      .join('、')}】进贡最大牌...`
+                  : `还贡环节：正在等待【${tributePhase.waitingSeats
+                      .map((s) => seats.find((item) => item.seat === s)?.name ?? `座位 ${s + 1}`)
+                      .join('、')}】挑选还贡牌...`}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 进贡 / 抗贡已完成事件广播横幅 */}
+      {!isTributeActive && game.tribute && game.tribute.type !== 'none' && !roundOver && (
         <div className={`tribute-broadcast-banner tribute-${game.tribute.type}`}>
           <span className="tribute-icon">
             {game.tribute.type === 'anti_tribute' ? '🛡️' : '👑'}
@@ -717,13 +877,17 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         </div>
       )}
 
-      {/* 错误提示 */}
-      {game.error && <div className="game-error-toast">{game.error}</div>}
+      {/* 错误提示 / 规则验证提示 */}
+      {(tributeError || game.error) && (
+        <div className="game-error-toast">{tributeError || game.error}</div>
+      )}
 
       {/* 玩家手牌扇形展示区 */}
       <div
         ref={fanAreaRef}
-        className={`hand-fan-area ${isHumanTurn && !roundOver ? 'hand-my-turn' : ''}`}
+        className={`hand-fan-area ${
+          (isTributeActive ? isMyTributeTurn : isHumanTurn && !roundOver) ? 'hand-my-turn' : ''
+        }`}
         onClick={(e) => {
           if ((e.target as HTMLElement).closest('.card, button')) return;
           handleClearSelection();
@@ -732,13 +896,24 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         <div className="hand-fan-container">
           {hand.map((card, index) => {
             const selected = selectedIds.has(card.id);
+            const tributeBadge = (() => {
+              if (isMyPayTurn) {
+                if (legalTributeCards.some((c) => c.id === card.id)) return '进贡';
+              } else if (isMyReturnTurn) {
+                if (recommendedReturn?.id === card.id) return '推荐';
+                if (legalReturnCards.some((c) => c.id === card.id)) return '可还';
+              }
+              return undefined;
+            })();
+
             return (
               <PlayingCard
                 key={card.id}
                 card={card}
                 level={level}
                 selected={selected}
-                disabled={!isHumanTurn || roundOver}
+                tributeBadge={tributeBadge}
+                disabled={isTributeActive ? !isMyTributeTurn : !isHumanTurn || roundOver}
                 onPointerDown={() => handlePointerDown(card.id)}
                 style={calculateFanStyle(index, hand.length, selected, isLandscape, fanWidth)}
               />
@@ -748,40 +923,93 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
       </div>
 
       {/* 底部操作按钮栏 */}
-      <div className={`game-action-controls ${isHumanTurn && !roundOver ? 'controls-my-turn' : ''}`}>
-        <button
-          type="button"
-          className="btn-pass"
-          onClick={handlePass}
-          disabled={!canPass || roundOver || !isHumanTurn}
-          title={!canPass && isHumanTurn ? '本轮为你领出，不可跳过' : ''}
+      {isTributeActive ? (
+        <div
+          className={`game-action-controls tribute-action-controls ${
+            isMyTributeTurn ? 'controls-my-turn' : 'controls-waiting'
+          }`}
         >
-          {!canPass && isHumanTurn ? '请领出' : '不要'}
-        </button>
+          {isMyPayTurn ? (
+            <>
+              <button
+                type="button"
+                className="btn-hint tribute-btn-recommend"
+                onClick={handleSmartTributeRecommend}
+              >
+                💡 智能推荐
+              </button>
+              <button
+                type="button"
+                className={`btn-play tribute-btn-confirm ${selectedCards.length === 1 ? 'pulse-ready' : ''}`}
+                onClick={handleConfirmPayTribute}
+                disabled={selectedCards.length !== 1}
+              >
+                👑 进贡此牌 {selectedCards.length === 1 ? `(${formatCardName(selectedCards[0]!)})` : ''}
+              </button>
+            </>
+          ) : isMyReturnTurn ? (
+            <>
+              <button
+                type="button"
+                className="btn-hint tribute-btn-recommend"
+                onClick={handleSmartTributeRecommend}
+              >
+                💡 智能推荐
+              </button>
+              <button
+                type="button"
+                className={`btn-play tribute-btn-confirm ${selectedCards.length === 1 ? 'pulse-ready' : ''}`}
+                onClick={handleConfirmReturnTribute}
+                disabled={selectedCards.length !== 1}
+              >
+                🎁 还贡此牌 {selectedCards.length === 1 ? `(${formatCardName(selectedCards[0]!)})` : ''}
+              </button>
+            </>
+          ) : (
+            <div className="tribute-waiting-pill">
+              <span className="tribute-waiting-dot" />
+              <span>
+                {tributePhase?.stage === 'pay' ? '正在等待其他玩家进贡...' : '正在等待受贡方挑选还贡牌...'}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={`game-action-controls ${isHumanTurn && !roundOver ? 'controls-my-turn' : ''}`}>
+          <button
+            type="button"
+            className="btn-pass"
+            onClick={handlePass}
+            disabled={!canPass || roundOver || !isHumanTurn}
+            title={!canPass && isHumanTurn ? '本轮为你领出，不可跳过' : ''}
+          >
+            {!canPass && isHumanTurn ? '请领出' : '不要'}
+          </button>
 
-        <button
-          type="button"
-          className="btn-hint"
-          onClick={handleHint}
-          disabled={!isHumanTurn || roundOver || hintOptions.length === 0}
-        >
-          💡 提示{hintOptions.length > 1 ? ` (${(hintIndex % hintOptions.length) + 1}/${hintOptions.length})` : ''}
-        </button>
+          <button
+            type="button"
+            className="btn-hint"
+            onClick={handleHint}
+            disabled={!isHumanTurn || roundOver || hintOptions.length === 0}
+          >
+            💡 提示{hintOptions.length > 1 ? ` (${(hintIndex % hintOptions.length) + 1}/${hintOptions.length})` : ''}
+          </button>
 
-        <button
-          type="button"
-          className={`btn-play ${selectionAnalysis.valid && selectedCards.length > 0 ? 'pulse-ready' : ''}`}
-          onClick={handlePlay}
-          disabled={!isHumanTurn || roundOver || !selectionAnalysis.valid}
-          title={selectedCards.length > 0 ? selectionAnalysis.detail : undefined}
-        >
-          {selectedCards.length > 0
-            ? selectionAnalysis.valid
-              ? `出牌 (${selectedCards.length})`
-              : '无法出牌'
-            : '出牌'}
-        </button>
-      </div>
+          <button
+            type="button"
+            className={`btn-play ${selectionAnalysis.valid && selectedCards.length > 0 ? 'pulse-ready' : ''}`}
+            onClick={handlePlay}
+            disabled={!isHumanTurn || roundOver || !selectionAnalysis.valid}
+            title={selectedCards.length > 0 ? selectionAnalysis.detail : undefined}
+          >
+            {selectedCards.length > 0
+              ? selectionAnalysis.valid
+                ? `出牌 (${selectedCards.length})`
+                : '无法出牌'
+              : '出牌'}
+          </button>
+        </div>
+      )}
 
       {/* 规则指南弹窗 */}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}

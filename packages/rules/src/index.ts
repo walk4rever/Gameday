@@ -16,7 +16,13 @@ export {
   findTributeCard,
   findReturnCard,
   getTributeCardValue,
-  formatCardName
+  formatCardName,
+  getLegalTributeCards,
+  validateTributeCard,
+  getLegalReturnCards,
+  validateReturnCard,
+  recommendTributeCard,
+  recommendReturnCard
 } from './tribute.js';
 export type { TributeExchange, TributeResult } from './tribute.js';
 export type { Card, Play, PlayType, Rank, Suit } from './types.js';

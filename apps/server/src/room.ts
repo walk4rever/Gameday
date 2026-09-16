@@ -11,9 +11,21 @@ import type {
   SeatSnapshot,
   SeatTrickAction,
   ServerMessage,
-  StateMessage
+  StateMessage,
+  TributeExchangeState,
+  TributePhaseInfo
 } from '@guandan/protocol';
-import { createDeck, SHAPE_RANKS, resolveTribute } from '@guandan/rules';
+import {
+  createDeck,
+  formatCardName,
+  findReturnCard,
+  findTributeCard,
+  getTributeCardValue,
+  resolveTribute,
+  SHAPE_RANKS,
+  validateReturnCard,
+  validateTributeCard
+} from '@guandan/rules';
 import type { Card, Rank } from '@guandan/rules';
 import type { Env } from './env.js';
 
@@ -37,6 +49,21 @@ interface SeatState {
   delegatedToBot: boolean;
 }
 
+export interface ActiveTributeExchange {
+  fromSeat: Seat;
+  toSeat: Seat;
+  tributeCard?: Card;
+  returnCard?: Card;
+}
+
+export interface ActiveTributeState {
+  type: 'single' | 'double';
+  stage: 'pay' | 'return';
+  level: Rank;
+  finishOrder: [Seat, Seat, Seat, Seat];
+  exchanges: ActiveTributeExchange[];
+}
+
 interface StoredRoom {
   /** null = 还在等人按"开打"的大厅阶段，进房间先看到谁在线，按开打才发牌。 */
   game: GameState | null;
@@ -49,6 +76,7 @@ interface StoredRoom {
     type: 'none' | 'anti_tribute' | 'single' | 'double';
     description: string;
   } | null;
+  tributeState?: ActiveTributeState | null;
 }
 
 interface Connection {
@@ -72,7 +100,8 @@ function freshRoom(): StoredRoom {
     })) as StoredRoom['seats'],
     teamLevels: [0, 0],
     dealerTeam: 0,
-    lastTribute: null
+    lastTribute: null,
+    tributeState: null
   };
 }
 
@@ -727,20 +756,85 @@ export class Room extends DurableObject<Env> {
         nextLevel = SHAPE_RANKS[nextIdx] ?? '2';
 
         const newHands = dealHands(shuffleDeck(createDeck()));
-        const tributeRes = resolveTribute(newHands, finishOrder as [Seat, Seat, Seat, Seat], nextLevel);
-        nextStartSeat = tributeRes.nextStartSeat;
-        room.lastTribute = {
-          type: tributeRes.type,
-          description: tributeRes.description
-        };
-        room.game = createGame(tributeRes.hands, nextLevel, nextStartSeat);
+
+        // 1. 平局判定（头游与搭档同一战队，但搭档为末游）
+        if (secondRank === 3) {
+          room.tributeState = null;
+          room.lastTribute = {
+            type: 'none',
+            description: '上一局平局，无需进贡，由头游首出。'
+          };
+          room.game = createGame(newHands, nextLevel, firstSeat);
+        } else if (secondRank === 1) {
+          // 2. 双下（获 1、2 名）
+          const headSeat = firstSeat;
+          const secondSeat = finishOrder[1]!;
+          const thirdSeat = finishOrder[2]!;
+          const lastSeat = finishOrder[3]!;
+
+          // 检查双大王抗贡
+          const losingBigJokers = [...newHands[thirdSeat], ...newHands[lastSeat]].filter(
+            (c) => c.rank === 'big_joker'
+          ).length;
+
+          if (losingBigJokers >= 2) {
+            room.tributeState = null;
+            room.lastTribute = {
+              type: 'anti_tribute',
+              description: '落败方摸到双大王，抗贡成功！免除进贡，由头游首出。'
+            };
+            room.game = createGame(newHands, nextLevel, headSeat);
+          } else {
+            room.lastTribute = null;
+            room.game = createGame(newHands, nextLevel, headSeat);
+            room.tributeState = {
+              type: 'double',
+              stage: 'pay',
+              level: nextLevel,
+              finishOrder: finishOrder as [Seat, Seat, Seat, Seat],
+              exchanges: [
+                { fromSeat: lastSeat, toSeat: headSeat },
+                { fromSeat: thirdSeat, toSeat: secondSeat }
+              ]
+            };
+            this.processBotTributes(room);
+          }
+        } else {
+          // 3. 单下（获 1、3 名）
+          const headSeat = firstSeat;
+          const lastSeat = finishOrder[3]!;
+
+          // 检查单下抗贡：末游独揽双大王
+          const lastBigJokers = newHands[lastSeat].filter((c) => c.rank === 'big_joker').length;
+          if (lastBigJokers >= 2) {
+            room.tributeState = null;
+            room.lastTribute = {
+              type: 'anti_tribute',
+              description: '末游独揽双大王，抗贡成功！免除进贡，由头游首出。'
+            };
+            room.game = createGame(newHands, nextLevel, headSeat);
+          } else {
+            room.lastTribute = null;
+            room.game = createGame(newHands, nextLevel, headSeat);
+            room.tributeState = {
+              type: 'single',
+              stage: 'pay',
+              level: nextLevel,
+              finishOrder: finishOrder as [Seat, Seat, Seat, Seat],
+              exchanges: [{ fromSeat: lastSeat, toSeat: headSeat }]
+            };
+            this.processBotTributes(room);
+          }
+        }
       } else if (game) {
         nextLevel = game.level;
         nextStartSeat = game.currentTurn;
         room.lastTribute = null;
+        room.tributeState = null;
         room.game = dealNewGame(nextLevel, nextStartSeat);
       } else {
         room.lastTribute = null;
+        room.tributeState = null;
         room.game = dealNewGame(nextLevel, nextStartSeat);
       }
 
@@ -748,7 +842,79 @@ export class Room extends DurableObject<Env> {
       return;
     }
 
+    if (message.type === 'pay_tribute') {
+      if (!room.tributeState || room.tributeState.stage !== 'pay' || !room.game) {
+        this.sendTo(playerId, { type: 'error', message: '当前不是进贡阶段' });
+        return;
+      }
+      const exchange = room.tributeState.exchanges.find(
+        (ex) => ex.fromSeat === seat && ex.tributeCard === undefined
+      );
+      if (!exchange) {
+        this.sendTo(playerId, { type: 'error', message: '当前无需你进贡' });
+        return;
+      }
+      const card = room.game.hands[seat].find((c) => c.id === message.cardId);
+      if (!card) {
+        this.sendTo(playerId, { type: 'error', message: '所选牌不在手牌中' });
+        return;
+      }
+      const validation = validateTributeCard(card, room.game.hands[seat], room.tributeState.level);
+      if (!validation.ok) {
+        this.sendTo(playerId, { type: 'error', message: validation.error });
+        return;
+      }
+
+      exchange.tributeCard = card;
+      room.game.hands[seat] = room.game.hands[seat].filter((c) => c.id !== card.id);
+      room.game.hands[exchange.toSeat].push(card);
+
+      if (room.tributeState.exchanges.every((ex) => ex.tributeCard !== undefined)) {
+        room.tributeState.stage = 'return';
+      }
+
+      this.processBotTributes(room);
+      await this.afterStateChange(room);
+      return;
+    }
+
+    if (message.type === 'return_tribute') {
+      if (!room.tributeState || room.tributeState.stage !== 'return' || !room.game) {
+        this.sendTo(playerId, { type: 'error', message: '当前不是还贡阶段' });
+        return;
+      }
+      const exchange = room.tributeState.exchanges.find(
+        (ex) => ex.toSeat === seat && ex.returnCard === undefined
+      );
+      if (!exchange) {
+        this.sendTo(playerId, { type: 'error', message: '当前无需你还贡' });
+        return;
+      }
+      const card = room.game.hands[seat].find((c) => c.id === message.cardId);
+      if (!card) {
+        this.sendTo(playerId, { type: 'error', message: '所选牌不在手牌中' });
+        return;
+      }
+      const validation = validateReturnCard(card, room.game.hands[seat], room.tributeState.level);
+      if (!validation.ok) {
+        this.sendTo(playerId, { type: 'error', message: validation.error });
+        return;
+      }
+
+      exchange.returnCard = card;
+      room.game.hands[seat] = room.game.hands[seat].filter((c) => c.id !== card.id);
+      room.game.hands[exchange.fromSeat].push(card);
+
+      this.processBotTributes(room);
+      await this.afterStateChange(room);
+      return;
+    }
+
     if (message.type === 'pass') {
+      if (room.tributeState) {
+        this.sendTo(playerId, { type: 'error', message: '进贡还贡阶段尚未结束，请先完成操作' });
+        return;
+      }
       const result = passTurn(game, seat);
       if (!result.ok) {
         this.sendTo(playerId, { type: 'error', message: result.error });
@@ -760,6 +926,10 @@ export class Room extends DurableObject<Env> {
     }
 
     if (message.type === 'play') {
+      if (room.tributeState) {
+        this.sendTo(playerId, { type: 'error', message: '进贡还贡阶段尚未结束，请先完成操作' });
+        return;
+      }
       const hand = game.hands[seat];
       const cards = message.cardIds
         .map((id) => hand.find((c) => c.id === id))
@@ -780,7 +950,7 @@ export class Room extends DurableObject<Env> {
 
   override async alarm(): Promise<void> {
     const room = this.room;
-    if (room.game === null || isRoundOver(room.game)) return;
+    if (room.game === null || isRoundOver(room.game) || room.tributeState) return;
     const game = room.game;
 
     const seat = game.currentTurn;
@@ -804,12 +974,92 @@ export class Room extends DurableObject<Env> {
     await this.afterStateChange(room);
   }
 
+  private getTributeWaitingSeats(state: ActiveTributeState): Seat[] {
+    if (state.stage === 'pay') {
+      return state.exchanges
+        .filter((ex) => ex.tributeCard === undefined)
+        .map((ex) => ex.fromSeat);
+    }
+    return state.exchanges
+      .filter((ex) => ex.returnCard === undefined)
+      .map((ex) => ex.toSeat);
+  }
+
+  private processBotTributes(room: StoredRoom): void {
+    if (!room.tributeState || !room.game) return;
+    let progressed = true;
+    while (progressed && room.tributeState) {
+      progressed = false;
+      const state = room.tributeState;
+      if (state.stage === 'pay') {
+        for (const exchange of state.exchanges) {
+          if (exchange.tributeCard === undefined && this.isBotControlled(room, exchange.fromSeat)) {
+            const card = findTributeCard(room.game.hands[exchange.fromSeat], state.level);
+            exchange.tributeCard = card;
+            room.game.hands[exchange.fromSeat] = room.game.hands[exchange.fromSeat].filter(
+              (c) => c.id !== card.id
+            );
+            room.game.hands[exchange.toSeat].push(card);
+            progressed = true;
+          }
+        }
+        if (state.exchanges.every((ex) => ex.tributeCard !== undefined)) {
+          state.stage = 'return';
+          progressed = true;
+        }
+      } else if (state.stage === 'return') {
+        for (const exchange of state.exchanges) {
+          if (exchange.returnCard === undefined && this.isBotControlled(room, exchange.toSeat)) {
+            const card = findReturnCard(room.game.hands[exchange.toSeat], state.level);
+            exchange.returnCard = card;
+            room.game.hands[exchange.toSeat] = room.game.hands[exchange.toSeat].filter(
+              (c) => c.id !== card.id
+            );
+            room.game.hands[exchange.fromSeat].push(card);
+            progressed = true;
+          }
+        }
+        if (state.exchanges.every((ex) => ex.returnCard !== undefined)) {
+          let nextStartSeat: Seat;
+          let description: string;
+          if (state.type === 'single') {
+            nextStartSeat = state.exchanges[0]!.fromSeat;
+            description = `单下进贡：末游向头游进贡【${formatCardName(
+              state.exchanges[0]!.tributeCard!
+            )}】，头游还贡【${formatCardName(
+              state.exchanges[0]!.returnCard!
+            )}】。由进贡方先出牌。`;
+          } else {
+            const lastEx = state.exchanges[0]!;
+            const thirdEx = state.exchanges[1]!;
+            const lastVal = getTributeCardValue(lastEx.tributeCard!, state.level);
+            const thirdVal = getTributeCardValue(thirdEx.tributeCard!, state.level);
+            nextStartSeat = lastVal >= thirdVal ? lastEx.fromSeat : thirdEx.fromSeat;
+            description = `双下进贡：末游贡【${formatCardName(
+              lastEx.tributeCard!
+            )}】，三游贡【${formatCardName(
+              thirdEx.tributeCard!
+            )}】。由进贡大牌者先出牌。`;
+          }
+          room.game.currentTurn = nextStartSeat;
+          room.lastTribute = {
+            type: state.type,
+            description
+          };
+          room.tributeState = null;
+          progressed = true;
+        }
+      }
+    }
+  }
+
   private async afterStateChange(room: StoredRoom): Promise<void> {
     await this.save();
     this.broadcast();
     if (
       room.game !== null &&
       !isRoundOver(room.game) &&
+      !room.tributeState &&
       this.isBotControlled(room, room.game.currentTurn)
     ) {
       await this.ctx.storage.setAlarm(Date.now() + BOT_MOVE_DELAY_MS);
@@ -903,6 +1153,20 @@ export class Room extends DurableObject<Env> {
       finished = [...finished, ...remaining];
     }
 
+    const tributePhase: TributePhaseInfo | null = this.room.tributeState
+      ? {
+          type: this.room.tributeState.type,
+          stage: this.room.tributeState.stage,
+          waitingSeats: this.getTributeWaitingSeats(this.room.tributeState),
+          exchanges: this.room.tributeState.exchanges.map((ex) => ({
+            fromSeat: ex.fromSeat,
+            toSeat: ex.toSeat,
+            tributeCard: ex.tributeCard,
+            returnCard: ex.returnCard
+          }))
+        }
+      : null;
+
     return {
       type: 'state',
       you: { seat: viewerSeat, hand: game.hands[viewerSeat] },
@@ -914,7 +1178,8 @@ export class Room extends DurableObject<Env> {
       finished,
       roundOver,
       paused: this.getPausedInfo(game, roomSeats),
-      tribute: this.room.lastTribute ?? null
+      tribute: this.room.lastTribute ?? null,
+      tributePhase
     };
   }
 }

@@ -1,5 +1,5 @@
 import type { Seat } from '@guandan/engine';
-import type { PausedInfo, PlayerStatus, SeatTrickAction } from '@guandan/protocol';
+import type { PausedInfo, PlayerStatus, SeatTrickAction, TributePhaseInfo } from '@guandan/protocol';
 import type { Card, Play, Rank } from '@guandan/rules';
 
 export interface SeatView {
@@ -30,11 +30,14 @@ export interface UseGameResult {
     type: 'none' | 'anti_tribute' | 'single' | 'double';
     description: string;
   } | null;
+  tributePhase?: TributePhaseInfo | null;
   error: string | null;
   clearError: () => void;
   playSelected: (cards: Card[]) => void;
   pass: () => void;
   restart: () => void;
+  payTribute: (cardId: string) => void;
+  returnTribute: (cardId: string) => void;
   delegateBot: (seat: Seat) => void;
   dissolve: () => void;
 }
