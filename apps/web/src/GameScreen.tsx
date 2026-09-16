@@ -24,6 +24,10 @@ import {
   sortHand
 } from './cardDisplay.js';
 import type { SeatView, UseGameResult } from './game/types.js';
+import { CardCounter } from './components/CardCounter.js';
+import { ChatInteraction } from './components/ChatInteraction.js';
+import { HonorModal } from './HonorModal.js';
+import { recordRoundFinished } from './honorLedger.js';
 import { MiniJokerCap, PlayingCard, SuitIcon } from './PlayingCard.js';
 import { RoundOverModal } from './RoundOverModal.js';
 import { RulesModal } from './RulesModal.js';
@@ -239,12 +243,14 @@ function SeatCard({
   seat,
   active,
   role,
-  finishedRank
+  finishedRank,
+  chatBubble
 }: {
   seat: SeatView;
   active: boolean;
   role: 'partner' | 'rival' | 'self';
   finishedRank?: number | undefined;
+  chatBubble?: { text: string; emoji?: string | undefined } | undefined;
 }) {
   const isPartner = role === 'partner';
   const isSelf = role === 'self';
@@ -252,9 +258,11 @@ function SeatCard({
   const count = seat.handCount;
   const isFinished = count === 0;
 
-  // 报牌逻辑：掼蛋报牌机制（剩 10 张以下黄标，剩 5 张以下红标急报）
-  const isUrgent = !isFinished && count <= 5;
-  const isWarning = !isFinished && count <= 10 && !isUrgent;
+  // 报牌逻辑：掼蛋报牌机制（剩 1 张报单，剩 2 张报双，剩 5 张以下急报，剩 10 张以下黄标）
+  const isSingle = !isFinished && count === 1;
+  const isDouble = !isFinished && count === 2;
+  const isUrgent = !isFinished && count <= 5 && !isSingle && !isDouble;
+  const isWarning = !isFinished && count <= 10 && !isUrgent && !isSingle && !isDouble;
 
   return (
     <div
@@ -262,6 +270,15 @@ function SeatCard({
         isFinished ? 'seat-finished' : ''
       }`}
     >
+      {/* 实时互动气泡 */}
+      {chatBubble && (
+        <div className="seat-speech-bubble-pop">
+          {chatBubble.emoji && <span className="bubble-emoji">{chatBubble.emoji}</span>}
+          <span className="bubble-text">{chatBubble.text}</span>
+          <div className="bubble-arrow" />
+        </div>
+      )}
+
       <div className="seat-avatar-wrap">
         <div
           className={`seat-avatar ${
@@ -315,9 +332,27 @@ function SeatCard({
             <span className="seat-finished-badge">已出完</span>
           ) : (
             <span
-              className={`seat-count-badge ${isUrgent ? 'count-urgent' : isWarning ? 'count-warning' : ''}`}
+              className={`seat-count-badge ${
+                isSingle
+                  ? 'count-report-single pulse-alarm'
+                  : isDouble
+                    ? 'count-report-double pulse-alarm'
+                    : isUrgent
+                      ? 'count-urgent'
+                      : isWarning
+                        ? 'count-warning'
+                        : ''
+              }`}
             >
-              {isUrgent ? `🚨 剩 ${count} 张` : isWarning ? `⚠️ 剩 ${count} 张` : `剩 ${count} 张`}
+              {isSingle
+                ? '🚨 报单 1 张！'
+                : isDouble
+                  ? '⚠️ 报双 2 张！'
+                  : isUrgent
+                    ? `🚨 剩 ${count} 张`
+                    : isWarning
+                      ? `⚠️ 剩 ${count} 张`
+                      : `剩 ${count} 张`}
             </span>
           )}
         </div>
@@ -412,6 +447,87 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
     }
     prevRoundOverRef.current = roundOver;
   }, [roundOver]);
+
+  // 家庭荣誉榜与结算自动记账
+  const [showHonorModal, setShowHonorModal] = useState(false);
+  const recordedRoundsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (roundOver && finishOrder.length === 4) {
+      const roundKey = `${game.matchSession?.roundNumber ?? 1}-${finishOrder.join(',')}`;
+      if (!recordedRoundsRef.current.has(roundKey)) {
+        recordedRoundsRef.current.add(roundKey);
+        recordRoundFinished({
+          seats,
+          finishOrder,
+          matchSession: game.matchSession ?? null
+        });
+      }
+    }
+  }, [roundOver, finishOrder, seats, game.matchSession]);
+
+  // 报单 / 报双首次触发全场高亮横幅与急促警报音
+  const [alertNotice, setAlertNotice] = useState<{ text: string; id: number } | null>(null);
+  const prevHandCountsRef = useRef<Record<number, number>>({});
+
+  useEffect(() => {
+    const currentCounts: Record<number, number> = {};
+    for (const s of seats) {
+      currentCounts[s.seat] = s.handCount;
+      const prev = prevHandCountsRef.current[s.seat];
+      if (prev !== undefined && prev > 2) {
+        if (s.handCount === 1) {
+          sound.alertWarning();
+          setAlertNotice({
+            text: `🚨 【${s.name}】报单！只剩 1 张牌！`,
+            id: Date.now()
+          });
+        } else if (s.handCount === 2) {
+          sound.alertWarning();
+          setAlertNotice({
+            text: `⚠️ 【${s.name}】报双！只剩 2 张牌！`,
+            id: Date.now()
+          });
+        }
+      }
+    }
+    prevHandCountsRef.current = currentCounts;
+  }, [seats]);
+
+  useEffect(() => {
+    if (!alertNotice) return;
+    const timer = setTimeout(() => {
+      setAlertNotice((curr) => (curr?.id === alertNotice.id ? null : curr));
+    }, 3200);
+    return () => clearTimeout(timer);
+  }, [alertNotice]);
+
+  // 快捷短语与表情气泡弹出管理
+  const [chatBubbles, setChatBubbles] = useState<
+    Record<number, { text: string; emoji?: string | undefined; id: number }>
+  >({});
+
+  useEffect(() => {
+    const chat = game.incomingChat;
+    if (!chat) return;
+    sound.popBubble();
+    const id = Date.now();
+    setChatBubbles((prev) => ({
+      ...prev,
+      [chat.seat]: { text: chat.message, emoji: chat.emoji, id }
+    }));
+    const timer = setTimeout(() => {
+      setChatBubbles((prev) => {
+        if (prev[chat.seat]?.id === id) {
+          const next = { ...prev };
+          delete next[chat.seat];
+          return next;
+        }
+        return prev;
+      });
+    }, 3800);
+    return () => clearTimeout(timer);
+  }, [game.incomingChat]);
 
   const topSeat = ((humanSeat + 2) % 4) as Seat;
   const leftSeat = ((humanSeat + 1) % 4) as Seat;
@@ -724,6 +840,12 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         </div>
 
         <div className="top-bar-controls">
+          {/* 极简折叠记牌器 */}
+          <CardCounter
+            level={level}
+            myHand={game.hand}
+            playedCards={game.playedCards ?? []}
+          />
           <button
             className="top-icon-btn orientation-toggle-btn"
             onClick={toggleOrientation}
@@ -737,6 +859,13 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             title={soundEnabled ? '音效已开启' : '音效已静音'}
           >
             {soundEnabled ? '🔊' : '🔇'}
+          </button>
+          <button
+            className="top-icon-btn"
+            onClick={() => setShowHonorModal(true)}
+            title="查看家庭长效战绩荣誉榜"
+          >
+            🏆 榜单
           </button>
           <button className="top-icon-btn" onClick={() => setShowRules(true)} title="掼蛋规则速查">
             📖 规则
@@ -824,6 +953,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
               active={currentTurn === topSeat && !roundOver}
               role="partner"
               finishedRank={finishOrder.includes(topSeat) ? finishOrder.indexOf(topSeat) : undefined}
+              chatBubble={chatBubbles[topSeat]}
             />
             <TrickDisplay
               action={trickFor(currentTrick, topSeat)}
@@ -839,6 +969,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
               active={currentTurn === leftSeat && !roundOver}
               role="rival"
               finishedRank={finishOrder.includes(leftSeat) ? finishOrder.indexOf(leftSeat) : undefined}
+              chatBubble={chatBubbles[leftSeat]}
             />
             <TrickDisplay
               action={trickFor(currentTrick, leftSeat)}
@@ -854,6 +985,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
               active={currentTurn === rightSeat && !roundOver}
               role="rival"
               finishedRank={finishOrder.includes(rightSeat) ? finishOrder.indexOf(rightSeat) : undefined}
+              chatBubble={chatBubbles[rightSeat]}
             />
             <TrickDisplay
               action={trickFor(currentTrick, rightSeat)}
@@ -874,6 +1006,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
               active={isHumanTurn && !roundOver}
               role="self"
               finishedRank={finishOrder.includes(humanSeat) ? finishOrder.indexOf(humanSeat) : undefined}
+              chatBubble={chatBubbles[humanSeat]}
             />
           </div>
         </div>
@@ -1012,6 +1145,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
               </span>
             </div>
           )}
+          <ChatInteraction onSend={game.sendChat} />
         </div>
       ) : (
         <div className={`game-action-controls ${isHumanTurn && !roundOver ? 'controls-my-turn' : ''}`}>
@@ -1047,11 +1181,24 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
                 : '无法出牌'
               : '出牌'}
           </button>
+
+          {/* 快捷短语互动入口 */}
+          <ChatInteraction onSend={game.sendChat} />
+        </div>
+      )}
+
+      {/* 报单/报双全屏横幅警报 */}
+      {alertNotice && (
+        <div className="fullscreen-alert-banner pulse-alarm">
+          <span>{alertNotice.text}</span>
         </div>
       )}
 
       {/* 规则指南弹窗 */}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+
+      {/* 家庭战绩荣誉榜弹窗 */}
+      {showHonorModal && <HonorModal onClose={() => setShowHonorModal(false)} />}
 
       {/* 结算颁奖台弹窗 */}
       {roundOver && (

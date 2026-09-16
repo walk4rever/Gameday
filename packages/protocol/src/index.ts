@@ -17,6 +17,7 @@ export type ClientMessage =
   | { type: 'return_tribute'; cardId: string }
   | { type: 'leave' }
   | { type: 'ping' }
+  | { type: 'chat'; message: string; emoji?: string | undefined }
   | { type: 'delegate_bot'; seat: Seat }
   | { type: 'dissolve' };
 
@@ -97,6 +98,17 @@ export interface StateMessage {
   } | null;
   tributePhase?: TributePhaseInfo | null;
   matchSession?: MatchSessionInfo | null;
+  /** 当前对局至今已打出的所有牌，供记牌器使用 */
+  playedCards?: Card[] | undefined;
+}
+
+export interface ChatMessage {
+  type: 'chat';
+  seat: Seat;
+  playerName: string;
+  message: string;
+  emoji?: string | undefined;
+  timestamp: number;
 }
 
 export interface ErrorMessage {
@@ -106,5 +118,10 @@ export interface ErrorMessage {
 
 export type PongMessage = { type: 'pong' };
 
-export type ServerMessage = LobbyMessage | StateMessage | ErrorMessage | PongMessage;
+export type ServerMessage =
+  | LobbyMessage
+  | StateMessage
+  | ErrorMessage
+  | PongMessage
+  | ChatMessage;
 

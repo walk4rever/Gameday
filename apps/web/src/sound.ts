@@ -220,6 +220,48 @@ class SoundManager {
     });
   }
 
+  /** 报单/报双紧迫警示音 (哔-哔 双重音) */
+  public alertWarning(): void {
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    [0, 0.12].forEach((offset) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, now + offset);
+      gain.gain.setValueAtTime(0.12, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.08);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.08);
+    });
+  }
+
+  /** 互动短语与表情气泡弹出音 (清脆啵音) */
+  public popBubble(): void {
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.08);
+
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
+
   /** 移动端触感反馈（轻/中/重/成功/错误） */
   public haptic(type: 'selection' | 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light'): void {
     triggerHaptic(type);

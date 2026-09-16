@@ -1,5 +1,6 @@
 import type { Seat } from '@guandan/engine';
 import type {
+  ChatMessage,
   MatchSessionInfo,
   PausedInfo,
   PlayerStatus,
@@ -38,6 +39,8 @@ export interface UseGameResult {
   } | null;
   tributePhase?: TributePhaseInfo | null;
   matchSession?: MatchSessionInfo | null;
+  playedCards?: Card[];
+  incomingChat?: ChatMessage | null;
   error: string | null;
   clearError: () => void;
   playSelected: (cards: Card[]) => void;
@@ -48,4 +51,5 @@ export interface UseGameResult {
   returnTribute: (cardId: string) => void;
   delegateBot: (seat: Seat) => void;
   dissolve: () => void;
+  sendChat: (message: string, emoji?: string) => void;
 }

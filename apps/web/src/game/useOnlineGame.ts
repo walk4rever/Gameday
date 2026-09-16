@@ -1,6 +1,7 @@
 import { classifyPlay, getLegalPlays } from '@guandan/rules';
 import type { Seat } from '@guandan/engine';
 import type {
+  ChatMessage,
   ClientMessage,
   LobbyMessage,
   LobbySeatSnapshot,
@@ -31,6 +32,7 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [message, setMessage] = useState<NonErrorMessage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [incomingChat, setIncomingChat] = useState<ChatMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const userLeftRef = useRef(false);
 
@@ -86,6 +88,10 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
           const data = JSON.parse(event.data as string) as ServerMessage;
           if (data.type === 'pong') {
             // 心跳响应，忽略
+            return;
+          }
+          if (data.type === 'chat') {
+            setIncomingChat(data);
             return;
           }
           if (data.type === 'error') {
@@ -153,6 +159,13 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
     send({ type: 'dissolve' });
   }, [send]);
 
+  const sendChat = useCallback(
+    (text: string, emoji?: string) => {
+      send({ type: 'chat', message: text, emoji });
+    },
+    [send]
+  );
+
   const game = useMemo<UseGameResult | null>(() => {
     if (!message || message.type !== 'state') return null;
     const state: StateMessage = message;
@@ -165,7 +178,7 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
     const canPass = isHumanTurn && state.lastPlay !== null && state.lastPlay.seat !== humanSeat;
 
     return {
-      humanSeat,
+      humanSeat: state.you.seat,
       level: state.level,
       hand: state.you.hand,
       seats: state.seats,
@@ -194,6 +207,8 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
       tribute: state.tribute ?? null,
       tributePhase: state.tributePhase ?? null,
       matchSession: state.matchSession ?? null,
+      playedCards: state.playedCards ?? [],
+      incomingChat,
       error,
       clearError: () => setError(null),
       playSelected: (cards) => send({ type: 'play', cardIds: cards.map((c) => c.id) }),
@@ -203,9 +218,10 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
       payTribute: (cardId: string) => send({ type: 'pay_tribute', cardId }),
       returnTribute: (cardId: string) => send({ type: 'return_tribute', cardId }),
       delegateBot,
-      dissolve
+      dissolve,
+      sendChat
     };
-  }, [message, error, send, delegateBot, dissolve]);
+  }, [message, error, send, delegateBot, dissolve, sendChat, incomingChat]);
 
   const view: OnlinePhase = useMemo(() => {
     if (game) return { phase: 'playing', game };

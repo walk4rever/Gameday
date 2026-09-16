@@ -704,6 +704,28 @@ export class Room extends DurableObject<Env> {
       return;
     }
 
+    // 快捷短语与互动表情广播
+    if (message.type === 'chat') {
+      const seatObj = room.seats[seat];
+      const playerName = seatObj?.name ?? `玩家 ${seat + 1}`;
+      const chatPayload = {
+        type: 'chat' as const,
+        seat,
+        playerName,
+        message: message.message,
+        emoji: message.emoji,
+        timestamp: Date.now()
+      };
+      for (const conn of this.connections) {
+        try {
+          conn.ws.send(JSON.stringify(chatPayload));
+        } catch {
+          // ignore
+        }
+      }
+      return;
+    }
+
     // 主动退出游戏
     if (message.type === 'leave') {
       const conn = this.connections.find((c) => c.playerId === playerId);
@@ -1304,6 +1326,13 @@ export class Room extends DurableObject<Env> {
       matchWinnerTeam: this.room.matchWinnerTeam ?? undefined
     };
 
+    const playedCards: Card[] = [];
+    for (const entry of game.history) {
+      if (entry.action === 'play' && entry.play) {
+        playedCards.push(...entry.play.cards);
+      }
+    }
+
     return {
       type: 'state',
       you: { seat: viewerSeat, hand: game.hands[viewerSeat] },
@@ -1317,7 +1346,8 @@ export class Room extends DurableObject<Env> {
       paused: this.getPausedInfo(game, roomSeats),
       tribute: this.room.lastTribute ?? null,
       tributePhase,
-      matchSession
+      matchSession,
+      playedCards
     };
   }
 }
