@@ -49,6 +49,62 @@ export function getOrCreatePlayerId(): string {
   return id;
 }
 
+const REMEMBERED_USERNAME_KEY = 'guandan:rememberedUsername';
+const RECENT_USERS_KEY = 'guandan:recentUsers';
+
+export function getRememberedUsername(): string {
+  try {
+    return localStorage.getItem(REMEMBERED_USERNAME_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function setRememberedUsername(name: string | null): void {
+  try {
+    if (name && name.trim()) {
+      localStorage.setItem(REMEMBERED_USERNAME_KEY, name.trim());
+    } else {
+      localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function getRecentUsers(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_USERS_KEY);
+    if (!raw) return [];
+    const list = JSON.parse(raw) as string[];
+    return Array.isArray(list) ? list.slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addRecentUser(name: string): void {
+  try {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const list = getRecentUsers().filter((u) => u !== trimmed);
+    list.unshift(trimmed);
+    localStorage.setItem(RECENT_USERS_KEY, JSON.stringify(list.slice(0, 4)));
+  } catch {
+    // ignore
+  }
+}
+
+export function removeRecentUser(name: string): void {
+  try {
+    const trimmed = name.trim();
+    const list = getRecentUsers().filter((u) => u !== trimmed);
+    localStorage.setItem(RECENT_USERS_KEY, JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+}
+
 /** 获取当前玩家昵称，优先使用登录用户名 */
 export function getCurrentPlayerName(): string {
   const user = getCurrentUser();

@@ -3232,6 +3232,207 @@ button:active {
   text-align: left;
 }
 
+/* 本机家庭常用账号快速选择横条 */
+.auth-recent-users-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+.auth-recent-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.auth-recent-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.auth-recent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-recent-pill:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fef08a;
+}
+
+.auth-recent-pill.is-selected {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #fef08a;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
+}
+
+.recent-user-avatar {
+  font-size: 0.75rem;
+}
+
+.recent-user-text {
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-user-del {
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.recent-user-del:hover {
+  color: #f87171;
+}
+
+/* 输入框标签与一键清空 */
+.auth-input-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.auth-input-clear-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.auth-input-clear-btn:hover {
+  color: #cbd5e1;
+}
+
+/* 手势密码头部信息与重置按钮 */
+.auth-pattern-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.pattern-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pattern-point-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.pattern-point-count.count-short {
+  color: #f59e0b;
+}
+
+.pattern-point-count.count-valid {
+  color: #10b981;
+}
+
+.pattern-clear-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.pattern-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+/* 记住用户名选项 */
+.auth-remember-row {
+  display: flex;
+  align-items: center;
+  margin: 2px 0 6px;
+}
+
+.auth-remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-checkbox {
+  accent-color: #f59e0b;
+  cursor: pointer;
+}
+
+/* 底部引导切换文案与链接 */
+.auth-bottom-switch {
+  margin-top: 14px;
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auth-switch-text {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-switch-link {
+  background: none;
+  border: none;
+  color: #fbbf24;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+  transition: color 0.15s ease;
+}
+
+.auth-switch-link:hover {
+  color: #fef08a;
+}
+
+.banner-link-btn {
+  margin-left: 8px;
+  font-weight: 700;
+  color: #fef08a;
+}
+
 /* ==========================================================================
    掉线与离开状态展示 (SeatCard & MiniSeats)
    ========================================================================== */
