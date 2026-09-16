@@ -202,7 +202,7 @@ export function AuthScreen({ onSuccess, onShowRules }: AuthScreenProps) {
         <div className="join-brand">
           <img src="/favicon.svg" alt="Gameday Logo" className="join-brand-logo" />
           <h1 className="join-title">Gameday</h1>
-          <div className="join-slogan-badge">Gameday - 游戏日</div>
+          <div className="join-slogan-badge">Gameday · 游戏日</div>
           <p className="join-subtitle">
             {mode === 'login' ? '家庭联机 · 手势密码极速登录' : '家庭联机 · 极简手势账号注册'}
           </p>
