@@ -25,6 +25,7 @@ import {
 } from './cardDisplay.js';
 import type { SeatView, UseGameResult } from './game/types.js';
 import { CardCounter } from './components/CardCounter.js';
+import { HeaderMenu } from './components/HeaderMenu.js';
 import { ChatInteraction } from './components/ChatInteraction.js';
 import { HonorModal } from './HonorModal.js';
 import { recordRoundFinished } from './honorLedger.js';
@@ -846,37 +847,51 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             myHand={game.hand}
             playedCards={game.playedCards ?? []}
           />
-          <button
-            className="top-icon-btn orientation-toggle-btn"
-            onClick={toggleOrientation}
-            title={isLandscape ? '切换为竖屏' : '切换为横屏（宽屏视野，防止误触）'}
-          >
-            {isLandscape ? '📱 竖屏' : '📱 横屏'}
-          </button>
-          <button
-            className={`top-icon-btn ${soundEnabled ? 'active' : 'muted'}`}
-            onClick={toggleSound}
-            title={soundEnabled ? '音效已开启' : '音效已静音'}
-          >
-            {soundEnabled ? '🔊' : '🔇'}
-          </button>
-          <button
-            className="top-icon-btn"
-            onClick={() => setShowHonorModal(true)}
-            title="查看家庭长效战绩荣誉榜"
-          >
-            🏆 榜单
-          </button>
-          <button className="top-icon-btn" onClick={() => setShowRules(true)} title="掼蛋规则速查">
-            📖 规则
-          </button>
-          <button
-            className="top-icon-btn"
-            onClick={() => setShowResetConfirm(true)}
-            title="重置整场比赛，重新从打 2 开打"
-          >
-            🔄 从2开始
-          </button>
+          {/* 快捷设置与游戏选项 */}
+          <HeaderMenu
+            title="游戏选项与设置"
+            triggerIcon="⚙️"
+            triggerLabel="设置"
+            items={[
+              {
+                id: 'sound',
+                icon: soundEnabled ? '🔊' : '🔇',
+                label: '游戏音效',
+                sublabel: soundEnabled ? '点击关闭出牌与获胜音效' : '点击开启沉浸式音效',
+                badge: soundEnabled ? '开' : '静音',
+                onClick: toggleSound
+              },
+              {
+                id: 'orientation',
+                icon: '📱',
+                label: isLandscape ? '切换为竖屏' : '切换为横屏',
+                sublabel: isLandscape ? '适合单手浏览' : '宽屏视野，防止误触',
+                badge: isLandscape ? '横屏' : '竖屏',
+                onClick: toggleOrientation
+              },
+              {
+                id: 'honor',
+                icon: '🏆',
+                label: '家庭战绩荣誉榜',
+                sublabel: '查看历届积分、胜率与胜场',
+                onClick: () => setShowHonorModal(true)
+              },
+              {
+                id: 'rules',
+                icon: '📖',
+                label: '掼蛋规则速查',
+                sublabel: '牌型等级与进贡规则',
+                onClick: () => setShowRules(true)
+              },
+              {
+                id: 'reset',
+                icon: '🔄',
+                label: '从打 2 重新开局',
+                sublabel: '重置双方级数从头开始',
+                onClick: () => setShowResetConfirm(true)
+              }
+            ]}
+          />
           {onExit && (
             <button
               className="top-icon-btn btn-exit"

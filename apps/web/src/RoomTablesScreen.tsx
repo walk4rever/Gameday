@@ -4,6 +4,7 @@ import { getOrCreatePlayerId } from './game/playerId.js';
 import { generateShareText, recordVisitedRoom } from './game/roomManager.js';
 import { CreateRoomModal } from './components/CreateRoomModal.js';
 import { RoomSwitcherModal } from './components/RoomSwitcherModal.js';
+import { HeaderMenu } from './components/HeaderMenu.js';
 
 export interface TableSeatInfo {
   seat: number;
@@ -261,36 +262,54 @@ export function RoomTablesScreen({
           >
             📤 邀请家人
           </button>
-          <button
-            className="icon-btn"
-            onClick={() => setShowCreateModal(true)}
-            title="创建新专属房间"
-          >
-            ➕ 新建
-          </button>
-          <button
-            className="icon-btn"
-            onClick={() => setShowSwitcherModal(true)}
-            title="切换常去房间"
-          >
-            🚪 换房
-          </button>
-          <button
-            className="icon-btn orientation-toggle-btn"
-            onClick={toggleOrientation}
-            title={isLandscape ? '切换为竖屏' : '切换为横屏'}
-          >
-            {isLandscape ? '📱 竖屏' : '📱 横屏'}
-          </button>
-          <button className="icon-btn" onClick={onShowRules} title="掼蛋规则速查">
-            📖 规则
-          </button>
-          <button className="icon-btn" onClick={() => void fetchStatus()} title="刷新桌况">
-            {loading ? '⏳' : '🔄'}
-          </button>
-          <button className="icon-btn" onClick={onChangeNameOrRoom} title="退出登录">
-            ← 退出
-          </button>
+          <HeaderMenu
+            title="房间选项与设置"
+            triggerIcon="⚙️"
+            triggerLabel="选项"
+            items={[
+              {
+                id: 'switch-room',
+                icon: '🚪',
+                label: '切换房间',
+                sublabel: '搜索或切换到常去房间',
+                onClick: () => setShowSwitcherModal(true)
+              },
+              {
+                id: 'create-room',
+                icon: '➕',
+                label: '新建专属房间',
+                sublabel: '定制家庭/好友专属牌室',
+                onClick: () => setShowCreateModal(true)
+              },
+              {
+                id: 'orientation',
+                icon: '📱',
+                label: isLandscape ? '切换为竖屏' : '切换为横屏',
+                badge: isLandscape ? '横屏中' : '竖屏中',
+                onClick: toggleOrientation
+              },
+              {
+                id: 'rules',
+                icon: '📖',
+                label: '掼蛋规则速查',
+                sublabel: '牌型、炸弹与升级规则',
+                onClick: onShowRules
+              },
+              {
+                id: 'refresh',
+                icon: '🔄',
+                label: '手动刷新桌况',
+                onClick: () => void fetchStatus()
+              },
+              {
+                id: 'exit',
+                icon: '←',
+                label: '返回门户 / 退出',
+                danger: true,
+                onClick: onChangeNameOrRoom
+              }
+            ]}
+          />
         </div>
       </header>
 

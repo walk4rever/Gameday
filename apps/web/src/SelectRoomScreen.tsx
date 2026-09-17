@@ -168,9 +168,6 @@ export function SelectRoomScreen({
           >
             {isLandscape ? '📱 竖屏' : '📱 横屏'}
           </button>
-          <button className="icon-btn" onClick={onShowRules} title="掼蛋规则速查">
-            📖 规则
-          </button>
           <button className="icon-btn" onClick={onLogout} title="退出登录">
             ← 退出
           </button>

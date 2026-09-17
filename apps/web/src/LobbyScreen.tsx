@@ -2,6 +2,7 @@ import type { Seat } from '@guandan/engine';
 import type { LobbySeatSnapshot } from '@guandan/protocol';
 import { useState } from 'react';
 import { useOrientation } from './useOrientation.js';
+import { HeaderMenu } from './components/HeaderMenu.js';
 
 export interface LobbyScreenProps {
   you: Seat;
@@ -83,25 +84,38 @@ export function LobbyScreen({ you, seats, error, onStart, onShowRules, onExit }:
       {/* 顶部房间信息与快速操作 */}
       <div className="lobby-header">
         <div className="lobby-title-wrap">
-          <h1 className="lobby-title">掼蛋房间</h1>
+          <h1 className="lobby-title">牌桌等候室</h1>
           <span className="room-id-tag">房号: {roomName}</span>
         </div>
         <div className="lobby-header-actions">
-          <button
-            className="icon-btn orientation-toggle-btn"
-            onClick={toggleOrientation}
-            title={isLandscape ? '切换为竖屏' : '切换为横屏'}
-          >
-            {isLandscape ? '📱 竖屏' : '📱 横屏'}
-          </button>
-          {onShowRules && (
-            <button className="icon-btn" onClick={onShowRules} title="掼蛋玩法速查">
-              📖 规则
-            </button>
-          )}
           <button className={`share-btn ${copied ? 'copied' : ''}`} onClick={copyRoomLink}>
             {copied ? '✓ 已复制链接' : '🔗 邀请家人'}
           </button>
+          <HeaderMenu
+            title="牌桌选项"
+            triggerIcon="⚙️"
+            triggerLabel="设置"
+            items={[
+              {
+                id: 'orientation',
+                icon: '📱',
+                label: isLandscape ? '切换为竖屏' : '切换为横屏',
+                badge: isLandscape ? '横屏' : '竖屏',
+                onClick: toggleOrientation
+              },
+              ...(onShowRules
+                ? [
+                    {
+                      id: 'rules',
+                      icon: '📖',
+                      label: '玩法规则速查',
+                      sublabel: '牌型与规则说明',
+                      onClick: onShowRules
+                    }
+                  ]
+                : [])
+            ]}
+          />
           {onExit && (
             <button className="icon-btn btn-leave-table" onClick={onExit} title="离开当前牌桌，返回房间大厅">
               🚪 离开

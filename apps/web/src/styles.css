@@ -833,23 +833,49 @@ button:active {
 
 .top-bar-controls {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .top-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   background: rgba(255, 255, 255, 0.1);
   color: #f8fafc;
-  padding: 5px 7px;
+  padding: 5px 9px;
   border-radius: 8px;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.top-icon-btn:hover,
+.top-icon-btn:active {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .top-icon-btn.muted {
   opacity: 0.6;
+}
+
+.top-icon-btn.btn-exit {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.top-icon-btn.btn-exit:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fecaca;
 }
 
 /* 牌桌毛毡椭圆台面 */
@@ -2501,10 +2527,12 @@ button:active {
 
 .room-header-btns {
   display: flex;
+  align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* 牌桌列表区 */
@@ -5115,6 +5143,226 @@ button:active {
   max-width: 320px;
   line-height: 1.4;
 }
+
+/* ==========================================================================
+   通用极简顶部下拉菜单 (HeaderMenu)
+   ========================================================================== */
+
+.header-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.header-menu-trigger:hover,
+.header-menu-trigger.is-active {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(254, 240, 138, 0.4);
+  color: #fef08a;
+}
+
+.header-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(1px);
+}
+
+.header-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 999;
+  min-width: 200px;
+  max-width: 280px;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(254, 240, 138, 0.2);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: menuFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header-menu-heading {
+  padding: 6px 10px 4px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+}
+
+.header-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #f1f5f9;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.header-menu-item:hover,
+.header-menu-item:active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fef08a;
+}
+
+.header-menu-item.item-danger {
+  color: #fca5a5;
+}
+
+.header-menu-item.item-danger:hover,
+.header-menu-item.item-danger:active {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+}
+
+.item-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.item-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.item-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.item-sublabel {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.item-badge {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  margin-left: auto;
+}
+
+/* 手机小屏端精简与防挤压优化 */
+@media (max-width: 480px) {
+  .room-tables-page {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .minimal-header {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .room-title-text {
+    font-size: 0.95rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .room-code-badge {
+    font-size: 0.68rem;
+    padding: 1px 4px;
+  }
+
+  .room-player-tag {
+    font-size: 0.72rem;
+    padding: 1px 6px;
+  }
+
+  .invite-btn {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+  }
+
+  .game-top-bar {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .top-session-scoreboard {
+    gap: 3px;
+  }
+
+  .score-team-pill {
+    padding: 2px 6px;
+    font-size: 0.72rem;
+  }
+
+  .score-team-name {
+    font-size: 0.68rem;
+  }
+
+  .top-bar-controls {
+    gap: 4px;
+  }
+
+  .top-icon-btn {
+    padding: 4px 7px;
+    font-size: 0.76rem;
+  }
+
+  .header-menu-trigger {
+    padding: 4px 7px;
+    font-size: 0.76rem;
+  }
+}
+
 
 
 
