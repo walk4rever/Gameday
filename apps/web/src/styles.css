@@ -968,6 +968,12 @@ button:active {
   padding-bottom: 2px;
 }
 
+.self-seat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* 座位卡片 */
 .table-seat-card {
   display: flex;
@@ -1189,85 +1195,103 @@ button:active {
   transition: transform 0.2s;
 }
 
-/* 桌面小牌 */
-.table-mini-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  width: 28px;
-  height: 40px;
-  background: #ffffff;
-  border-radius: 4px;
-  padding: 2px 2px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
-  font-family: var(--font-poker);
-  line-height: 1;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  user-select: none;
-  overflow: hidden;
-  box-sizing: border-box;
+/* 桌面出牌：与手牌 100% 保持一致的高精度花色、宫廷大牌人像与角标 */
+.card.card-table-play {
+  position: relative !important;
+  bottom: auto !important;
+  width: 32px !important;
+  height: 46px !important;
+  border-radius: 5px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  cursor: default !important;
+  user-select: none !important;
+  flex-shrink: 0;
+  transform: none !important;
+  transition: none !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
-.table-mini-card.card-black {
-  color: #0f172a;
+.landscape-mode .card.card-table-play,
+.app-forced-landscape .card.card-table-play {
+  width: 36px !important;
+  height: 52px !important;
+  border-radius: 6px !important;
 }
 
-.table-mini-card.card-red {
-  color: #dc2626;
+.card.card-table-play .card-corner {
+  padding: 1px 2px !important;
+  gap: 0 !important;
+  z-index: 2 !important;
 }
 
-.mini-corner {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  z-index: 2;
+.card.card-table-play .card-rank {
+  font-size: 0.72rem !important;
+  line-height: 0.95 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.5px !important;
 }
 
-.mini-rank {
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  line-height: 0.95;
+.card.card-table-play .card-suit-small {
+  font-size: 0.56rem !important;
+  line-height: 1 !important;
 }
 
-.mini-suit-icon {
-  font-size: 0.62rem;
-  line-height: 1;
+.card.card-table-play .card-corner-bottom {
+  display: none !important;
 }
 
-.mini-joker-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.62rem;
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.5px;
-  z-index: 2;
-  gap: 1px;
+.card.card-table-play .card-center {
+  padding: 0 1px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 !important;
 }
 
-.mini-joker-svg {
-  font-size: 0.78rem;
+.card.card-table-play .card-suit-large {
+  font-size: 1.12rem !important;
 }
 
-.mini-joker-text {
-  font-size: 0.52rem;
-  line-height: 1;
+.card.card-table-play .card-court-center {
+  width: 22px !important;
+  height: 28px !important;
 }
 
-.mini-card-big-joker {
-  background: linear-gradient(180deg, #ffffff 0%, #fff1f2 100%);
-  border-color: rgba(220, 38, 38, 0.4);
+.card.card-table-play .card-joker-body {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
 }
 
-.mini-card-small-joker {
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-  border-color: rgba(71, 85, 105, 0.4);
+.card.card-table-play .card-joker-center {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 !important;
+}
+
+.card.card-table-play .card-joker-illustration {
+  width: 22px !important;
+  height: 30px !important;
+}
+
+.card.card-table-play .card-corner-joker-icon {
+  font-size: 0.58rem !important;
+}
+
+.card.card-table-play .card-badge {
+  font-size: 0.52rem !important;
+  padding: 0 2px !important;
+  top: 1px !important;
+  right: 1px !important;
+  border-radius: 3px !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.3px !important;
+  z-index: 3 !important;
 }
 
 .mini-card-center-suit {
@@ -5362,6 +5386,250 @@ button:active {
     font-size: 0.76rem;
   }
 }
+/* ==========================================================================
+   东西南北方位指示系统 (Compass & Direction)
+   ========================================================================== */
+
+.seat-avatar-wrap {
+  position: relative;
+}
+
+/* 玩家头像角标：南 / 北 / 东 / 西 方位印章 */
+.seat-compass-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1.5px solid #f59e0b;
+  color: #fef08a;
+  font-size: 0.65rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.65);
+  z-index: 3;
+}
+
+.seat-compass-badge.dir-ns {
+  border-color: #38bdf8;
+  color: #bae6fd;
+}
+
+.seat-compass-badge.dir-ew {
+  border-color: #f59e0b;
+  color: #fef08a;
+}
+
+.seat-dir-prefix {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #f59e0b;
+  margin-right: 2px;
+  white-space: nowrap;
+}
+
+/* 牌桌区域方位标 */
+.zone-compass-tag {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 牌桌毛毡中央罗盘方位水印 (东西南北) */
+.felt-compass-cross {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  pointer-events: none;
+}
+
+.compass-crosshair {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+}
+
+.compass-crosshair::before,
+.compass-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.compass-crosshair::before {
+  top: 10px;
+  bottom: 10px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+}
+
+.compass-crosshair::after {
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.compass-point {
+  position: absolute;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.16);
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.compass-n { top: 2px; left: 50%; transform: translateX(-50%); }
+.compass-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+.compass-w { left: 4px; top: 50%; transform: translateY(-50%); }
+.compass-e { right: 4px; top: 50%; transform: translateY(-50%); }
+
+/* ==========================================================================
+   设置菜单内常驻比赛计分板 (Menu Scoreboard)
+   ========================================================================== */
+
+.header-menu-custom-header {
+  margin-bottom: 6px;
+}
+
+.menu-scoreboard-card {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(254, 240, 138, 0.25);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.menu-scoreboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-score-title {
+  font-size: 0.76rem;
+  color: #fef08a;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.menu-score-round {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.menu-score-teams-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.menu-team-box {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.menu-team-box.is-my-team {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.menu-team-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 2px;
+}
+
+.menu-my-badge {
+  font-size: 0.6rem;
+  background: #f59e0b;
+  color: #0f172a;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 900;
+}
+
+.menu-dealer-badge {
+  font-size: 0.6rem;
+  background: #ef4444;
+  color: #ffffff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 900;
+}
+
+.menu-team-rank-val {
+  font-size: 0.96rem;
+  font-weight: 900;
+  color: #fbbf24;
+}
+
+.menu-vs-divider {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+/* 顶部极简品牌级牌胶囊 */
+.game-top-brand {
+  display: flex;
+  align-items: center;
+}
+
+.game-brand-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.game-brand-level strong {
+  color: #fde047;
+  font-size: 0.88rem;
+}
+
+.game-wild-label {
+  font-size: 0.72rem;
+  color: #f87171;
+  font-weight: 700;
+}
+
 
 
 

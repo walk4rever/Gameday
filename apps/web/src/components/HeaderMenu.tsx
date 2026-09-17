@@ -15,6 +15,7 @@ export interface HeaderMenuProps {
   triggerLabel?: string;
   triggerIcon?: string;
   title?: string;
+  headerContent?: React.ReactNode;
   className?: string;
 }
 
@@ -23,6 +24,7 @@ export function HeaderMenu({
   triggerLabel = '更多',
   triggerIcon = '⚙️',
   title,
+  headerContent,
   className = ''
 }: HeaderMenuProps) {
   const [open, setOpen] = useState(false);
@@ -70,6 +72,7 @@ export function HeaderMenu({
 
           {/* 浮动菜单列表 */}
           <div className="header-menu-dropdown" role="menu">
+            {headerContent && <div className="header-menu-custom-header">{headerContent}</div>}
             {title && <div className="header-menu-heading">{title}</div>}
             <div className="header-menu-list">
               {items.map((item) => (

@@ -13,6 +13,8 @@ export interface PlayingCardProps {
   onPointerDown?: (e: PointerEvent<HTMLButtonElement>) => void;
   onPointerEnter?: (e: PointerEvent<HTMLButtonElement>) => void;
   style?: CSSProperties;
+  size?: 'normal' | 'table';
+  className?: string;
 }
 
 /** 经典法式四花色高精度矢量图标（平滑微弧方块、饱满黑桃/梅花/红桃） */
@@ -327,7 +329,9 @@ export function PlayingCard({
   onClick,
   onPointerDown,
   onPointerEnter,
-  style
+  style,
+  size = 'normal',
+  className: customClassName
 }: PlayingCardProps) {
   const joker = isJoker(card);
   const isBig = card.rank === 'big_joker';
@@ -335,22 +339,76 @@ export function PlayingCard({
   const isLevel = level ? isLevelCard(card, level) : false;
   const isWild = level ? isWildCard(card, level) : false;
 
-  const className = [
+  const cardClassName = [
     'card',
+    size === 'table' ? 'card-table-play' : '',
     red ? 'card-red' : 'card-black',
     joker ? (isBig ? 'card-big-joker' : 'card-small-joker') : '',
     selected ? 'card-selected' : '',
     hinted ? 'card-hinted' : '',
     isLevel ? 'card-level' : '',
-    isWild ? 'card-wild' : ''
+    isWild ? 'card-wild' : '',
+    customClassName
   ]
     .filter(Boolean)
     .join(' ');
 
+  // 桌面出牌模式（保持与手牌完全一致的高精度花色、宫廷人像、经典大丑立绘与逢人配角标）
+  if (size === 'table') {
+    return (
+      <div className={cardClassName} style={style} data-card-id={card.id}>
+        {/* 级牌 / 逢人配专属勋章 */}
+        {tributeBadge ? (
+          <span className="card-badge card-badge-tribute" title={tributeBadge}>
+            {tributeBadge}
+          </span>
+        ) : isWild ? (
+          <span className="card-badge card-badge-wild" title="逢人配（百搭万能牌）">
+            ★ 配
+          </span>
+        ) : isLevel ? (
+          <span className="card-badge card-badge-level" title="当前级牌">
+            级
+          </span>
+        ) : null}
+
+        {joker ? (
+          <div className="card-joker-body">
+            <div className="card-corner card-corner-top">
+              <span className="card-rank">{isBig ? '大' : '小'}</span>
+              <span className="card-rank">王</span>
+              <MiniJokerCap isBig={isBig} className="card-corner-joker-icon" />
+            </div>
+            <div className="card-joker-center">
+              <ClassicJokerIllustration isBig={isBig} className="card-joker-illustration" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* 左上角标 */}
+            <div className="card-corner card-corner-top">
+              <span className="card-rank">{rankLabel(card)}</span>
+              <SuitIcon suit={card.suit} className="card-suit-small" />
+            </div>
+
+            {/* 中间高精度花色/宫廷大牌徽章（J/Q/K/A 与手牌完全一致） */}
+            <div className="card-center">
+              {card.rank === 'J' || card.rank === 'Q' || card.rank === 'K' || card.rank === 'A' ? (
+                <CourtCardCenter rank={card.rank} suit={card.suit} />
+              ) : (
+                <SuitIcon suit={card.suit} className="card-suit-large" />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
-      className={className}
+      className={cardClassName}
       style={style}
       onClick={onClick}
       onPointerDown={onPointerDown}

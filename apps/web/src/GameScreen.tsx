@@ -164,40 +164,23 @@ function getTrickCardMarginLeft(idx: number, total: number, isLandscape: boolean
   return isLandscape ? -11 : -12;
 }
 
-/** 桌面打出的小扑克牌：左上角对齐角标，牌多叠放时依然一目了然 */
-function TableMiniCard({ card }: { card: Card }) {
-  const red = isRed(card);
-  const joker = isJoker(card);
-  return (
-    <div className={`table-mini-card ${red ? 'card-red' : 'card-black'} ${joker ? (card.rank === 'big_joker' ? 'mini-card-big-joker' : 'mini-card-small-joker') : ''}`}>
-      {joker ? (
-        <div className="mini-joker-col">
-          <MiniJokerCap isBig={card.rank === 'big_joker'} className="mini-joker-svg" />
-          <span className="mini-joker-text">{card.rank === 'big_joker' ? '大' : '小'}</span>
-          <span className="mini-joker-text">王</span>
-        </div>
-      ) : (
-        <>
-          <div className="mini-corner">
-            <span className="mini-rank">{rankLabel(card)}</span>
-            <SuitIcon suit={card.suit} className="mini-suit-icon" />
-          </div>
-          <div className="mini-card-center-suit">
-            <SuitIcon suit={card.suit} className="mini-center-suit-icon" />
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+/** 掼蛋标准规范席位方位定义：0:南, 1:东, 2:北, 3:西 (对门为搭档) */
+const SEAT_DIRECTIONS: Record<Seat, { name: '南' | '东' | '北' | '西'; team: '南北' | '东西'; teamCode: 'NS' | 'EW' }> = {
+  0: { name: '南', team: '南北', teamCode: 'NS' },
+  1: { name: '东', team: '东西', teamCode: 'EW' },
+  2: { name: '北', team: '南北', teamCode: 'NS' },
+  3: { name: '西', team: '东西', teamCode: 'EW' }
+};
 
-/** 牌桌上各家打出的牌区 */
+/** 牌桌上各家打出的牌区：使用与手牌统一的 PlayingCard 矢量渲染，图案、王牌与逢人配角标完全一致 */
 function TrickDisplay({
   action,
+  level,
   isWinning,
   isLandscape
 }: {
   action: SeatTrickAction | undefined;
+  level?: Rank | undefined;
   isWinning?: boolean;
   isLandscape?: boolean;
 }) {
@@ -231,7 +214,7 @@ function TrickDisplay({
               zIndex: idx + 1
             }}
           >
-            <TableMiniCard card={card} />
+            <PlayingCard card={card} level={level} size="table" />
           </div>
         ))}
       </div>
@@ -253,6 +236,7 @@ function SeatCard({
   finishedRank?: number | undefined;
   chatBubble?: { text: string; emoji?: string | undefined } | undefined;
 }) {
+  const dirMeta = SEAT_DIRECTIONS[seat.seat];
   const isPartner = role === 'partner';
   const isSelf = role === 'self';
   const roleText = isSelf ? '我' : isPartner ? '搭档' : '对手';
@@ -301,11 +285,19 @@ function SeatCard({
             <span className="seat-online-dot" title="在线" />
           )}
         </div>
+        {/* 东西南北方位清晰指示徽章 */}
+        <span
+          className={`seat-compass-badge dir-${dirMeta.teamCode.toLowerCase()}`}
+          title={`${dirMeta.name}方位 (${dirMeta.team})`}
+        >
+          {dirMeta.name}
+        </span>
         {active && <span className="thinking-beacon" title="行动中" />}
       </div>
 
       <div className="seat-main-info">
         <div className="seat-top-row">
+          <span className="seat-dir-prefix">[{dirMeta.name}]</span>
           <span className="seat-display-name">{seat.name}</span>
           {!seat.isBot && seat.status === 'offline' && (
             <span className="seat-status-pill pill-offline">🔴 掉线</span>
@@ -318,7 +310,7 @@ function SeatCard({
               isSelf ? 'pill-self' : isPartner ? 'pill-partner' : 'pill-rival'
             }`}
           >
-            {roleText}
+            {dirMeta.name} · {roleText}
           </span>
         </div>
 
@@ -801,43 +793,13 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
     >
       {banner}
 
-      {/* 顶部常驻会话比分看板 (Session Scoreboard) 与控制栏 */}
+      {/* 顶部常驻会话极简栏（计分牌与退出已收纳进设置菜单，实现极致清爽） */}
       <div className="game-top-bar">
-        <div className="top-session-scoreboard">
-          <div
-            className={`score-team-pill score-team-ns ${
-              (humanSeat % 2) === 0 ? 'is-my-team' : ''
-            }`}
-            title="南北队当前级数"
-          >
-            <span className="score-team-name">🛡️ 南北</span>
-            <span className="score-rank-text">打 {game.matchSession?.teamRanks[0] ?? level}</span>
-            {game.matchSession?.dealerTeam === 0 && (
-              <span className="dealer-badge" title="当前发球/当庄">
-                庄
-              </span>
-            )}
-          </div>
-
-          <div className="score-center-meta">
-            <span className="score-round-pill">第 {game.matchSession?.roundNumber ?? 1} 副</span>
-            <span className="score-wild-hint">红桃{level}配</span>
-          </div>
-
-          <div
-            className={`score-team-pill score-team-ew ${
-              (humanSeat % 2) === 1 ? 'is-my-team' : ''
-            }`}
-            title="东西队当前级数"
-          >
-            <span className="score-team-name">⚔️ 东西</span>
-            <span className="score-rank-text">打 {game.matchSession?.teamRanks[1] ?? '2'}</span>
-            {game.matchSession?.dealerTeam === 1 && (
-              <span className="dealer-badge" title="当前发球/当庄">
-                庄
-              </span>
-            )}
-          </div>
+        <div className="game-top-brand">
+          <span className="game-brand-level">
+            级牌 <strong>{level}</strong>
+            <span className="game-wild-label">（红桃{level}配）</span>
+          </span>
         </div>
 
         <div className="top-bar-controls">
@@ -847,12 +809,46 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             myHand={game.hand}
             playedCards={game.playedCards ?? []}
           />
-          {/* 快捷设置与游戏选项 */}
+          {/* 快捷设置与游戏选项（已收纳对局计分板与退出按钮） */}
           <HeaderMenu
-            title="游戏选项与设置"
+            title="游戏设置与选项"
             triggerIcon="⚙️"
             triggerLabel="设置"
+            headerContent={
+              <div className="menu-scoreboard-card">
+                <div className="menu-scoreboard-header">
+                  <span className="menu-score-title">🏆 对局比赛计分牌</span>
+                  <span className="menu-score-round">第 {game.matchSession?.roundNumber ?? 1} 副</span>
+                </div>
+                <div className="menu-score-teams-row">
+                  <div className={`menu-team-box ${(humanSeat % 2) === 0 ? 'is-my-team' : ''}`}>
+                    <div className="menu-team-name-row">
+                      <span className="menu-team-name">🛡️ 南北队</span>
+                      {(humanSeat % 2) === 0 && <span className="menu-my-badge">我方</span>}
+                      {game.matchSession?.dealerTeam === 0 && <span className="menu-dealer-badge">庄</span>}
+                    </div>
+                    <div className="menu-team-rank-val">打 {game.matchSession?.teamRanks[0] ?? level}</div>
+                  </div>
+                  <div className="menu-vs-divider">VS</div>
+                  <div className={`menu-team-box ${(humanSeat % 2) === 1 ? 'is-my-team' : ''}`}>
+                    <div className="menu-team-name-row">
+                      <span className="menu-team-name">⚔️ 东西队</span>
+                      {(humanSeat % 2) === 1 && <span className="menu-my-badge">我方</span>}
+                      {game.matchSession?.dealerTeam === 1 && <span className="menu-dealer-badge">庄</span>}
+                    </div>
+                    <div className="menu-team-rank-val">打 {game.matchSession?.teamRanks[1] ?? '2'}</div>
+                  </div>
+                </div>
+              </div>
+            }
             items={[
+              {
+                id: 'honor',
+                icon: '🏆',
+                label: '家庭战绩荣誉榜',
+                sublabel: '查看历届积分、胜率与胜场',
+                onClick: () => setShowHonorModal(true)
+              },
               {
                 id: 'sound',
                 icon: soundEnabled ? '🔊' : '🔇',
@@ -870,13 +866,6 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
                 onClick: toggleOrientation
               },
               {
-                id: 'honor',
-                icon: '🏆',
-                label: '家庭战绩荣誉榜',
-                sublabel: '查看历届积分、胜率与胜场',
-                onClick: () => setShowHonorModal(true)
-              },
-              {
                 id: 'rules',
                 icon: '📖',
                 label: '掼蛋规则速查',
@@ -889,18 +878,21 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
                 label: '从打 2 重新开局',
                 sublabel: '重置双方级数从头开始',
                 onClick: () => setShowResetConfirm(true)
-              }
+              },
+              ...(onExit
+                ? [
+                    {
+                      id: 'exit',
+                      icon: '🚪',
+                      label: '退出当前牌桌',
+                      sublabel: '返回房间选桌大厅',
+                      danger: true,
+                      onClick: () => setShowExitConfirm(true)
+                    }
+                  ]
+                : [])
             ]}
           />
-          {onExit && (
-            <button
-              className="top-icon-btn btn-exit"
-              onClick={() => setShowExitConfirm(true)}
-              title="退出当前牌桌，返回房间大厅"
-            >
-              🚪 退出
-            </button>
-          )}
         </div>
       </div>
 
@@ -955,14 +947,22 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             handleClearSelection();
           }}
         >
-          {/* 台面中央暗纹 */}
+          {/* 台面中央暗纹：四方位罗盘水印与级牌标识 */}
           <div className="felt-center-watermark">
+            <div className="felt-compass-cross">
+              <span className="compass-point compass-n">北</span>
+              <span className="compass-point compass-s">南</span>
+              <span className="compass-point compass-w">西</span>
+              <span className="compass-point compass-e">东</span>
+              <div className="compass-crosshair" />
+            </div>
             <span className="felt-watermark-text">GUANDAN</span>
-            <span className="felt-watermark-sub">级牌 {level}</span>
+            <span className="felt-watermark-sub">级牌 {level} · 红桃配</span>
           </div>
 
           {/* 北：搭档席位 */}
           <div className="table-zone zone-top">
+            <span className="zone-compass-tag">{SEAT_DIRECTIONS[topSeat].name} · 搭档方位</span>
             <SeatCard
               seat={seatAt(seats, topSeat)}
               active={currentTurn === topSeat && !roundOver}
@@ -972,13 +972,15 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             />
             <TrickDisplay
               action={trickFor(currentTrick, topSeat)}
+              level={level}
               isWinning={lastPlay?.seat === topSeat}
               isLandscape={isLandscape}
             />
           </div>
 
-          {/* 西：上家（对手）席位 */}
+          {/* 西/东：上家席位 */}
           <div className="table-zone zone-left">
+            <span className="zone-compass-tag">{SEAT_DIRECTIONS[leftSeat].name} · 对手</span>
             <SeatCard
               seat={seatAt(seats, leftSeat)}
               active={currentTurn === leftSeat && !roundOver}
@@ -988,13 +990,15 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             />
             <TrickDisplay
               action={trickFor(currentTrick, leftSeat)}
+              level={level}
               isWinning={lastPlay?.seat === leftSeat}
               isLandscape={isLandscape}
             />
           </div>
 
-          {/* 东：下家（对手）席位 */}
+          {/* 东/西：下家席位 */}
           <div className="table-zone zone-right">
+            <span className="zone-compass-tag">{SEAT_DIRECTIONS[rightSeat].name} · 对手</span>
             <SeatCard
               seat={seatAt(seats, rightSeat)}
               active={currentTurn === rightSeat && !roundOver}
@@ -1004,6 +1008,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             />
             <TrickDisplay
               action={trickFor(currentTrick, rightSeat)}
+              level={level}
               isWinning={lastPlay?.seat === rightSeat}
               isLandscape={isLandscape}
             />
@@ -1013,16 +1018,20 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           <div className="table-zone zone-self">
             <TrickDisplay
               action={trickFor(currentTrick, humanSeat)}
+              level={level}
               isWinning={lastPlay?.seat === humanSeat}
               isLandscape={isLandscape}
             />
-            <SeatCard
-              seat={seatAt(seats, humanSeat)}
-              active={isHumanTurn && !roundOver}
-              role="self"
-              finishedRank={finishOrder.includes(humanSeat) ? finishOrder.indexOf(humanSeat) : undefined}
-              chatBubble={chatBubbles[humanSeat]}
-            />
+            <div className="self-seat-row">
+              <span className="zone-compass-tag">{SEAT_DIRECTIONS[humanSeat].name} · 自己</span>
+              <SeatCard
+                seat={seatAt(seats, humanSeat)}
+                active={isHumanTurn && !roundOver}
+                role="self"
+                finishedRank={finishOrder.includes(humanSeat) ? finishOrder.indexOf(humanSeat) : undefined}
+                chatBubble={chatBubbles[humanSeat]}
+              />
+            </div>
           </div>
         </div>
       </div>
