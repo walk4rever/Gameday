@@ -11,8 +11,6 @@ export interface GameSettingsModalProps {
   humanSeat: Seat;
   soundEnabled: boolean;
   onToggleSound: () => void;
-  isLandscape: boolean;
-  onToggleOrientation: () => void;
   onShowRules: () => void;
   onShowHonor: () => void;
   onResetMatch: () => void;
@@ -39,8 +37,6 @@ export function GameSettingsModal({
   humanSeat,
   soundEnabled,
   onToggleSound,
-  isLandscape,
-  onToggleOrientation,
   onShowRules,
   onShowHonor,
   onResetMatch,
@@ -271,22 +267,6 @@ export function GameSettingsModal({
                 </div>
                 <span className={`action-toggle-status ${soundEnabled ? 'status-on' : 'status-off'}`}>
                   {soundEnabled ? '开' : '关'}
-                </span>
-              </button>
-
-              {/* 屏幕方向切换 */}
-              <button
-                type="button"
-                className="settings-action-card"
-                onClick={onToggleOrientation}
-              >
-                <span className="action-icon">📱</span>
-                <div className="action-meta">
-                  <span className="action-title">屏幕方向</span>
-                  <span className="action-desc">{isLandscape ? '当前为横屏宽视野' : '当前为竖屏单手浏览'}</span>
-                </div>
-                <span className="action-toggle-status status-normal">
-                  {isLandscape ? '横屏' : '竖屏'}
                 </span>
               </button>
 

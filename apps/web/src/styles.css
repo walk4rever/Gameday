@@ -5395,33 +5395,155 @@ button:active {
   z-index: 100;
 }
 
-.game-top-brand {
-  display: flex;
+/* 左上角：两方当前打几 + 庄家 + 当前级牌等信息融合看板 */
+.match-unified-pill {
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.game-brand-level {
+.match-unified-pill:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(254, 240, 138, 0.4);
+  box-shadow: 0 0 12px rgba(254, 240, 138, 0.2);
+}
+
+.unified-teams-group {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
-  font-size: 0.78rem;
-  font-weight: 600;
 }
 
-.game-brand-level strong {
-  color: #fde047;
-  font-size: 0.88rem;
+.unified-team-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.76rem;
+  color: #cbd5e1;
 }
 
-.game-wild-label {
-  font-size: 0.72rem;
-  color: #f87171;
+.unified-team-item.is-me {
+  color: #fef08a;
+}
+
+.unified-team-label {
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.unified-team-item.is-me .unified-team-label {
+  opacity: 1;
   font-weight: 700;
+}
+
+.unified-team-rank {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.unified-team-rank strong {
+  font-size: 0.88rem;
+  color: #fde047;
+  font-weight: 900;
+  margin-left: 1px;
+}
+
+.unified-dealer-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 1px 3.5px;
+  border-radius: 3px;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.unified-vs-sep {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  margin: 0 1px;
+}
+
+.unified-pipe-sep {
+  width: 1px;
+  height: 13px;
+  background: rgba(255, 255, 255, 0.18);
+  margin: 0 1px;
+}
+
+.unified-level-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.unified-level-text {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.unified-level-text strong {
+  color: #38bdf8;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.unified-wild-text {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.16);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 4px;
+  padding: 0.5px 4px;
+  line-height: 1.2;
+}
+
+@media (max-width: 400px) {
+  .match-unified-pill {
+    gap: 5px;
+    padding: 2px 7px;
+  }
+  .unified-team-item {
+    font-size: 0.7rem;
+    gap: 2px;
+  }
+  .unified-team-label {
+    font-size: 0.65rem;
+  }
+  .unified-team-rank {
+    font-size: 0.72rem;
+  }
+  .unified-team-rank strong {
+    font-size: 0.8rem;
+  }
+  .unified-level-text {
+    font-size: 0.7rem;
+  }
+  .unified-level-text strong {
+    font-size: 0.8rem;
+  }
+  .unified-wild-text {
+    font-size: 0.62rem;
+    padding: 0 2px;
+  }
 }
 
 .top-settings-btn {
@@ -5444,6 +5566,50 @@ button:active {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(254, 240, 138, 0.4);
   color: #fef08a;
+}
+
+/* 右下角：横竖屏快捷切换浮动按钮（纯图标，不用文字） */
+.floating-orientation-btn {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(254, 240, 138, 0.35);
+  color: #fef08a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 10px rgba(254, 240, 138, 0.15);
+  z-index: 100;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.floating-orientation-btn:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(254, 240, 138, 0.65);
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), 0 0 16px rgba(254, 240, 138, 0.3);
+}
+
+.floating-orientation-btn:active {
+  transform: scale(0.92);
+}
+
+.orientation-rotate-icon {
+  width: 21px;
+  height: 21px;
+  transition: transform 0.3s ease;
+}
+
+.floating-orientation-btn:hover .orientation-rotate-icon {
+  transform: rotate(90deg);
 }
 
 .game-settings-modal {

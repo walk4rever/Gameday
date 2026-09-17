@@ -774,6 +774,12 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
 
   const seatName = (seat: Seat) => seatAt(seats, seat).name;
 
+  const matchSession = game.matchSession;
+  const nsRank = matchSession?.teamRanks[0] ?? level;
+  const ewRank = matchSession?.teamRanks[1] ?? '2';
+  const dealerTeam = matchSession?.dealerTeam ?? 0;
+  const isMyTeamNS = (humanSeat % 2) === 0;
+
   return (
     <div
       className={`app game-screen-container ${isLandscape ? 'landscape-mode' : ''} ${
@@ -787,11 +793,36 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
 
       {/* 顶部常驻极简信息与统一设置栏 */}
       <div className="game-top-bar">
-        <div className="game-top-brand">
-          <span className="game-brand-level">
-            级牌 <strong>{level}</strong>
-            <span className="game-wild-label">（红桃{level}配）</span>
-          </span>
+        {/* 左上角：两方当前打几 + 庄家 + 当前级牌融合看板 */}
+        <div
+          className="match-unified-pill"
+          onClick={() => setShowSettingsModal(true)}
+          role="button"
+          tabIndex={0}
+          title="点击查看详细计分与记牌器"
+        >
+          <div className="unified-teams-group">
+            <div className={`unified-team-item ${isMyTeamNS ? 'is-me' : ''}`}>
+              <span className="unified-team-label">南北</span>
+              <span className="unified-team-rank">打<strong>{nsRank}</strong></span>
+              {dealerTeam === 0 && <span className="unified-dealer-tag">庄</span>}
+            </div>
+
+            <span className="unified-vs-sep">:</span>
+
+            <div className={`unified-team-item ${!isMyTeamNS ? 'is-me' : ''}`}>
+              <span className="unified-team-label">东西</span>
+              <span className="unified-team-rank">打<strong>{ewRank}</strong></span>
+              {dealerTeam === 1 && <span className="unified-dealer-tag">庄</span>}
+            </div>
+          </div>
+
+          <span className="unified-pipe-sep" />
+
+          <div className="unified-level-group">
+            <span className="unified-level-text">级牌 <strong>{level}</strong></span>
+            <span className="unified-wild-text">♥配</span>
+          </div>
         </div>
 
         <div className="top-bar-controls">
@@ -1125,8 +1156,6 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           humanSeat={humanSeat}
           soundEnabled={soundEnabled}
           onToggleSound={toggleSound}
-          isLandscape={isLandscape}
-          onToggleOrientation={toggleOrientation}
           onShowRules={() => setShowRules(true)}
           onShowHonor={() => setShowHonorModal(true)}
           onResetMatch={() => setShowResetConfirm(true)}
@@ -1214,6 +1243,35 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           </div>
         </div>
       )}
+
+      {/* 快捷横竖屏切换悬浮按钮（右下角纯图标，不用文字） */}
+      <button
+        type="button"
+        className="floating-orientation-btn"
+        onClick={toggleOrientation}
+        title={isLandscape ? '切换为竖屏' : '切换为横屏'}
+        aria-label={isLandscape ? '切换为竖屏' : '切换为横屏'}
+      >
+        <svg
+          className="orientation-rotate-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+          <path d="M21 21v-5h-5" />
+          {isLandscape ? (
+            <rect x="6.5" y="8.5" width="11" height="7" rx="1.5" strokeWidth="1.8" />
+          ) : (
+            <rect x="8.5" y="6.5" width="7" height="11" rx="1.5" strokeWidth="1.8" />
+          )}
+        </svg>
+      </button>
     </div>
   );
 }
