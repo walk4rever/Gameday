@@ -4,17 +4,17 @@ import { isJoker, isLevelCard, isRed, isWildCard, rankLabel } from './cardDispla
 
 export interface PlayingCardProps {
   card: Card;
-  level?: Rank;
-  selected?: boolean;
-  hinted?: boolean;
-  disabled?: boolean;
+  level?: Rank | undefined;
+  selected?: boolean | undefined;
+  hinted?: boolean | undefined;
+  disabled?: boolean | undefined;
   tributeBadge?: string | undefined;
-  onClick?: () => void;
-  onPointerDown?: (e: PointerEvent<HTMLButtonElement>) => void;
-  onPointerEnter?: (e: PointerEvent<HTMLButtonElement>) => void;
-  style?: CSSProperties;
-  size?: 'normal' | 'table';
-  className?: string;
+  onClick?: (() => void) | undefined;
+  onPointerDown?: ((e: PointerEvent<HTMLButtonElement>) => void) | undefined;
+  onPointerEnter?: ((e: PointerEvent<HTMLButtonElement>) => void) | undefined;
+  style?: CSSProperties | undefined;
+  size?: 'normal' | 'table' | undefined;
+  className?: string | undefined;
 }
 
 /** 经典法式四花色高精度矢量图标（平滑微弧方块、饱满黑桃/梅花/红桃） */

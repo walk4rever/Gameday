@@ -7,17 +7,17 @@ export interface GameSettingsModalProps {
   level: Rank;
   myHand: Card[];
   playedCards: Card[];
-  matchSession?: MatchSessionInfo | null;
-  humanSeat?: Seat;
-  room?: string;
+  matchSession?: MatchSessionInfo | null | undefined;
+  humanSeat?: Seat | undefined;
+  room?: string | undefined;
   soundEnabled: boolean;
   onToggleSound: () => void;
-  onShareRoom?: () => void;
-  copiedInvite?: boolean;
+  onShareRoom?: (() => void) | undefined;
+  copiedInvite?: boolean | undefined;
   onShowRules: () => void;
   onShowHonor: () => void;
   onResetMatch: () => void;
-  onExit?: () => void;
+  onExit?: (() => void) | undefined;
   onClose: () => void;
 }
 

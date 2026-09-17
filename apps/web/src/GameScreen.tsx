@@ -1,7 +1,7 @@
 import { getRankedHintPlays } from '@guandan/bot';
 import type { Seat } from '@guandan/engine';
 import type { SeatTrickAction } from '@guandan/protocol';
-import type { Card, Play } from '@guandan/rules';
+import type { Card, Play, Rank } from '@guandan/rules';
 import {
   classifyPlay,
   formatCardName,

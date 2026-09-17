@@ -42,7 +42,7 @@ export function App() {
     const roomParam = new URLSearchParams(window.location.search).get('room');
     if (user && user.username) {
       if (roomParam && roomParam !== 'default') {
-        recordVisitedRoom(roomParam, roomParam);
+        recordVisitedRoom({ roomId: roomParam, name: roomParam, hasPassword: false });
         return { kind: 'online', name: user.username, room: roomParam, tableId: '1' };
       }
       return { kind: 'select_room', name: user.username };
@@ -65,7 +65,7 @@ export function App() {
     currentUrl.searchParams.set('room', cleanRoom);
     window.history.replaceState({}, '', currentUrl.toString());
 
-    recordVisitedRoom(cleanRoom, cleanRoom);
+    recordVisitedRoom({ roomId: cleanRoom, name: cleanRoom, hasPassword: false });
 
     setMode((prev) => {
       const name = 'name' in prev ? prev.name : (getCurrentUser()?.username || '玩家');
@@ -133,7 +133,7 @@ export function App() {
           onSuccess={(user) => {
             const roomParam = new URLSearchParams(window.location.search).get('room');
             if (roomParam && roomParam !== 'default') {
-              recordVisitedRoom(roomParam, roomParam);
+              recordVisitedRoom({ roomId: roomParam, name: roomParam, hasPassword: false });
               setMode({ kind: 'online', name: user.username, room: roomParam, tableId: '1' });
             } else {
               setMode({ kind: 'select_room', name: user.username });
@@ -208,7 +208,7 @@ function OnlineGame({
     onExit();
   };
 
-  if (view.phase === 'connecting') {
+  if (view.phase !== 'playing') {
     return (
       <div className="app menu connecting-page">
         <div className="connecting-card">
