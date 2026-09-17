@@ -9,8 +9,11 @@ export interface GameSettingsModalProps {
   playedCards: Card[];
   matchSession?: MatchSessionInfo | null;
   humanSeat: Seat;
+  room?: string;
   soundEnabled: boolean;
   onToggleSound: () => void;
+  onShareRoom?: () => void;
+  copiedInvite?: boolean;
   onShowRules: () => void;
   onShowHonor: () => void;
   onResetMatch: () => void;
@@ -35,8 +38,11 @@ export function GameSettingsModal({
   playedCards,
   matchSession,
   humanSeat,
+  room,
   soundEnabled,
   onToggleSound,
+  onShareRoom,
+  copiedInvite,
   onShowRules,
   onShowHonor,
   onResetMatch,
@@ -269,6 +275,24 @@ export function GameSettingsModal({
                   {soundEnabled ? '开' : '关'}
                 </span>
               </button>
+
+              {/* 邀请好友同桌 */}
+              {onShareRoom && (
+                <button
+                  type="button"
+                  className="settings-action-card"
+                  onClick={onShareRoom}
+                >
+                  <span className="action-icon">🔗</span>
+                  <div className="action-meta">
+                    <span className="action-title">{copiedInvite ? '✓ 邀请链接已复制' : '邀请好友同桌'}</span>
+                    <span className="action-desc">{room ? `房间：${room}（点击复制链接）` : '复制本桌专属链接分享好友'}</span>
+                  </div>
+                  <span className={`action-toggle-status ${copiedInvite ? 'status-on' : 'status-normal'}`}>
+                    {copiedInvite ? '已复制' : '分享'}
+                  </span>
+                </button>
+              )}
 
               {/* 荣誉战绩榜 */}
               <button

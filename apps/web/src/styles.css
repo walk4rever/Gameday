@@ -935,6 +935,115 @@ button:active {
   letter-spacing: 2px;
 }
 
+/* 牌桌中央等候开局发牌面板 */
+.table-waiting-center-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(254, 240, 138, 0.35);
+  border-radius: 20px;
+  padding: 16px 22px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 25px rgba(254, 240, 138, 0.12);
+  z-index: 5;
+  width: min(90%, 340px);
+  animation: modal-fade-in 0.3s ease-out;
+  pointer-events: auto;
+}
+
+.waiting-center-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fde047;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+
+.waiting-center-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #f8fafc;
+  margin: 0 0 6px;
+  letter-spacing: 0.5px;
+}
+
+.waiting-center-desc {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  margin: 0 0 14px;
+  line-height: 1.4;
+}
+
+.waiting-center-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.waiting-start-deal-btn {
+  flex: 1.2;
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  color: #0f172a;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(234, 179, 8, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.waiting-start-deal-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(234, 179, 8, 0.55);
+}
+
+.waiting-start-deal-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.waiting-share-invite-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.waiting-share-invite-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(254, 240, 138, 0.4);
+  color: #fef08a;
+}
+
+.waiting-share-invite-btn.is-copied {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #34d399;
+}
+
 .table-zone {
   display: flex;
   flex-direction: column;

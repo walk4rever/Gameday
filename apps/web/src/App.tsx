@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react';
 import { AuthScreen } from './AuthScreen.js';
 import { GameScreen } from './GameScreen.js';
-import { LobbyScreen } from './LobbyScreen.js';
-import { RoomTablesScreen } from './RoomTablesScreen.js';
 import { RulesModal } from './RulesModal.js';
 import { SelectRoomScreen } from './SelectRoomScreen.js';
 import { RoomPasswordModal } from './components/RoomPasswordModal.js';
 import { getCurrentUser, logoutUser } from './game/playerId.js';
-import { getRoomAuthToken } from './game/roomManager.js';
+import { getRoomAuthToken, recordVisitedRoom } from './game/roomManager.js';
 import { useOnlineGame } from './game/useOnlineGame.js';
 
 type Mode =
   | { kind: 'auth' }
   | { kind: 'select_room'; name: string }
-  | { kind: 'tables'; name: string; room: string }
   | { kind: 'online'; name: string; room: string; tableId: string; preferredSeat?: number };
 
 function defaultWsUrl(roomName: string): string {
@@ -45,7 +42,8 @@ export function App() {
     const roomParam = new URLSearchParams(window.location.search).get('room');
     if (user && user.username) {
       if (roomParam && roomParam !== 'default') {
-        return { kind: 'tables', name: user.username, room: roomParam };
+        recordVisitedRoom(roomParam, roomParam);
+        return { kind: 'online', name: user.username, room: roomParam, tableId: '1' };
       }
       return { kind: 'select_room', name: user.username };
     }
@@ -59,7 +57,7 @@ export function App() {
 
   const [showGlobalRules, setShowGlobalRules] = useState(false);
 
-  // 进入指定房间
+  // 进入指定房间（直通游戏牌桌）
   const enterRoom = (newRoom: string) => {
     const cleanRoom = newRoom.trim();
     if (!cleanRoom) return;
@@ -67,9 +65,11 @@ export function App() {
     currentUrl.searchParams.set('room', cleanRoom);
     window.history.replaceState({}, '', currentUrl.toString());
 
+    recordVisitedRoom(cleanRoom, cleanRoom);
+
     setMode((prev) => {
       const name = 'name' in prev ? prev.name : (getCurrentUser()?.username || '玩家');
-      return { kind: 'tables', name, room: cleanRoom };
+      return { kind: 'online', name, room: cleanRoom, tableId: '1' };
     });
   };
 
@@ -87,7 +87,7 @@ export function App() {
 
   // 检测当前房间是否需要密码拦截
   useEffect(() => {
-    if (mode.kind !== 'tables' && mode.kind !== 'online') {
+    if (mode.kind !== 'online') {
       setPasswordRequiredRoom(null);
       return;
     }
@@ -124,7 +124,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [mode.kind, mode.kind === 'tables' || mode.kind === 'online' ? mode.room : '']);
+  }, [mode.kind, mode.kind === 'online' ? mode.room : '']);
 
   return (
     <>
@@ -133,7 +133,8 @@ export function App() {
           onSuccess={(user) => {
             const roomParam = new URLSearchParams(window.location.search).get('room');
             if (roomParam && roomParam !== 'default') {
-              setMode({ kind: 'tables', name: user.username, room: roomParam });
+              recordVisitedRoom(roomParam, roomParam);
+              setMode({ kind: 'online', name: user.username, room: roomParam, tableId: '1' });
             } else {
               setMode({ kind: 'select_room', name: user.username });
             }
@@ -154,32 +155,13 @@ export function App() {
         />
       )}
 
-      {mode.kind === 'tables' && (
-        <RoomTablesScreen
-          room={mode.room}
-          playerName={mode.name}
-          onSelectTable={(tableId, seat) =>
-            setMode({
-              kind: 'online',
-              name: mode.name,
-              room: mode.room,
-              tableId,
-              ...(seat !== undefined ? { preferredSeat: seat } : {})
-            })
-          }
-          onShowRules={() => setShowGlobalRules(true)}
-          onChangeNameOrRoom={returnToSelectRoom}
-          onSwitchRoom={enterRoom}
-        />
-      )}
-
       {mode.kind === 'online' && (
         <OnlineGame
           name={mode.name}
           room={mode.room}
           tableId={mode.tableId}
           {...(mode.preferredSeat !== undefined ? { preferredSeat: mode.preferredSeat } : {})}
-          onExit={() => setMode({ kind: 'tables', name: mode.name, room: mode.room })}
+          onExit={returnToSelectRoom}
           onShowRules={() => setShowGlobalRules(true)}
         />
       )}
@@ -234,32 +216,20 @@ function OnlineGame({
           <p className="connecting-text">
             {status === 'closed'
               ? '连接已断开，或本桌对局已满员（4人锁定）无法加入…'
-              : `正在连接 ${tableId === '2' ? '2' : '1'}号桌 · 经典掼蛋…`}
+              : `正在进入房间【${room}】…`}
           </p>
           <button className="secondary-action-btn" onClick={handleExit}>
-            ← 返回桌子列表
+            ← 返回选房大厅
           </button>
         </div>
       </div>
     );
   }
 
-  if (view.phase === 'lobby') {
-    return (
-      <LobbyScreen
-        you={view.you}
-        seats={view.seats}
-        error={view.error}
-        onStart={view.start}
-        onShowRules={onShowRules}
-        onExit={handleExit}
-      />
-    );
-  }
-
   return (
     <GameScreen
       game={view.game}
+      room={room}
       onExit={handleExit}
       banner={
         status === 'open' ? undefined : (

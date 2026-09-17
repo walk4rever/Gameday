@@ -39,6 +39,7 @@ const FAN_LIFT_PX = 18;
 
 export interface GameScreenProps {
   game: UseGameResult;
+  room?: string;
   banner?: ReactNode;
   onExit?: () => void;
 }
@@ -345,7 +346,7 @@ function SeatCard({
   );
 }
 
-export function GameScreen({ game, banner, onExit }: GameScreenProps) {
+export function GameScreen({ game, room, banner, onExit }: GameScreenProps) {
   const {
     level,
     seats,
@@ -368,6 +369,18 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => sound.isEnabled());
+  const [copiedInvite, setCopiedInvite] = useState(false);
+
+  const handleShareRoom = () => {
+    try {
+      void navigator.clipboard.writeText(window.location.href);
+      setCopiedInvite(true);
+      setTimeout(() => setCopiedInvite(false), 2000);
+    } catch {
+      setCopiedInvite(true);
+      setTimeout(() => setCopiedInvite(false), 2000);
+    }
+  };
 
   // 容器宽度动态感知，严密防止最左边与最右边的牌在不同手机视口上被裁切
   const fanAreaRef = useRef<HTMLDivElement>(null);
@@ -888,11 +901,39 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             handleClearSelection();
           }}
         >
-          {/* 台面中央暗纹：极简级牌水印 */}
-          <div className="felt-center-watermark">
-            <span className="felt-watermark-text">GUANDAN</span>
-            <span className="felt-watermark-sub">级牌 {level} · 红桃配</span>
-          </div>
+          {/* 台面中央暗纹 / 等候开局发牌面板 */}
+          {game.waitingToStart ? (
+            <div className="table-waiting-center-card">
+              <div className="waiting-center-badge">🎴 等候开局</div>
+              <h2 className="waiting-center-title">经典掼蛋 · 4 人对局</h2>
+              <p className="waiting-center-desc">
+                {seats.filter((s) => !s.isBot && s.connected).length > 1
+                  ? `已有 ${seats.filter((s) => !s.isBot && s.connected).length} 位真人玩家就座，随时可以发牌`
+                  : '空位已自动由智能 AI 补齐，随时可以开始发牌'}
+              </p>
+              <div className="waiting-center-actions">
+                <button
+                  type="button"
+                  className="waiting-start-deal-btn pulse-glow"
+                  onClick={game.onStartGame}
+                >
+                  🃏 开始发牌
+                </button>
+                <button
+                  type="button"
+                  className={`waiting-share-invite-btn ${copiedInvite ? 'is-copied' : ''}`}
+                  onClick={handleShareRoom}
+                >
+                  {copiedInvite ? '✓ 已复制邀请链接' : '🔗 邀请好友同桌'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="felt-center-watermark">
+              <span className="felt-watermark-text">GUANDAN</span>
+              <span className="felt-watermark-sub">级牌 {level} · 红桃配</span>
+            </div>
+          )}
 
           {/* 北：搭档席位 */}
           <div className="table-zone zone-top">
@@ -1046,97 +1087,99 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         </div>
       </div>
 
-      {/* 底部操作按钮栏 */}
-      {isTributeActive ? (
-        <div
-          className={`game-action-controls tribute-action-controls ${
-            isMyTributeTurn ? 'controls-my-turn' : 'controls-waiting'
-          }`}
-        >
-          {isMyPayTurn ? (
-            <>
-              <button
-                type="button"
-                className="btn-hint tribute-btn-recommend"
-                onClick={handleSmartTributeRecommend}
-              >
-                💡 智能推荐
-              </button>
-              <button
-                type="button"
-                className={`btn-play tribute-btn-confirm ${selectedCards.length === 1 ? 'pulse-ready' : ''}`}
-                onClick={handleConfirmPayTribute}
-                disabled={selectedCards.length !== 1}
-              >
-                👑 进贡此牌 {selectedCards.length === 1 ? `(${formatCardName(selectedCards[0]!)})` : ''}
-              </button>
-            </>
-          ) : isMyReturnTurn ? (
-            <>
-              <button
-                type="button"
-                className="btn-hint tribute-btn-recommend"
-                onClick={handleSmartTributeRecommend}
-              >
-                💡 智能推荐
-              </button>
-              <button
-                type="button"
-                className={`btn-play tribute-btn-confirm ${selectedCards.length === 1 ? 'pulse-ready' : ''}`}
-                onClick={handleConfirmReturnTribute}
-                disabled={selectedCards.length !== 1}
-              >
-                🎁 还贡此牌 {selectedCards.length === 1 ? `(${formatCardName(selectedCards[0]!)})` : ''}
-              </button>
-            </>
-          ) : (
-            <div className="tribute-waiting-pill">
-              <span className="tribute-waiting-dot" />
-              <span>
-                {tributePhase?.stage === 'pay' ? '正在等待其他玩家进贡...' : '正在等待受贡方挑选还贡牌...'}
-              </span>
-            </div>
-          )}
-          <ChatInteraction onSend={game.sendChat} />
-        </div>
-      ) : (
-        <div className={`game-action-controls ${isHumanTurn && !roundOver ? 'controls-my-turn' : ''}`}>
-          <button
-            type="button"
-            className="btn-pass"
-            onClick={handlePass}
-            disabled={!canPass || roundOver || !isHumanTurn}
-            title={!canPass && isHumanTurn ? '本轮为你领出，不可跳过' : ''}
+      {/* 底部操作按钮栏（仅在正式发牌后显示） */}
+      {!game.waitingToStart && (
+        isTributeActive ? (
+          <div
+            className={`game-action-controls tribute-action-controls ${
+              isMyTributeTurn ? 'controls-my-turn' : 'controls-waiting'
+            }`}
           >
-            {!canPass && isHumanTurn ? '请领出' : '不要'}
-          </button>
+            {isMyPayTurn ? (
+              <>
+                <button
+                  type="button"
+                  className="btn-hint tribute-btn-recommend"
+                  onClick={handleSmartTributeRecommend}
+                >
+                  💡 智能推荐
+                </button>
+                <button
+                  type="button"
+                  className={`btn-play tribute-btn-confirm ${selectedCards.length === 1 ? 'pulse-ready' : ''}`}
+                  onClick={handleConfirmPayTribute}
+                  disabled={selectedCards.length !== 1}
+                >
+                  👑 进贡此牌 {selectedCards.length === 1 ? `(${formatCardName(selectedCards[0]!)})` : ''}
+                </button>
+              </>
+            ) : isMyReturnTurn ? (
+              <>
+                <button
+                  type="button"
+                  className="btn-hint tribute-btn-recommend"
+                  onClick={handleSmartTributeRecommend}
+                >
+                  💡 智能推荐
+                </button>
+                <button
+                  type="button"
+                  className={`btn-play tribute-btn-confirm ${selectedCards.length === 1 ? 'pulse-ready' : ''}`}
+                  onClick={handleConfirmReturnTribute}
+                  disabled={selectedCards.length !== 1}
+                >
+                  🎁 还贡此牌 {selectedCards.length === 1 ? `(${formatCardName(selectedCards[0]!)})` : ''}
+                </button>
+              </>
+            ) : (
+              <div className="tribute-waiting-pill">
+                <span className="tribute-waiting-dot" />
+                <span>
+                  {tributePhase?.stage === 'pay' ? '正在等待其他玩家进贡...' : '正在等待受贡方挑选还贡牌...'}
+                </span>
+              </div>
+            )}
+            <ChatInteraction onSend={game.sendChat} />
+          </div>
+        ) : (
+          <div className={`game-action-controls ${isHumanTurn && !roundOver ? 'controls-my-turn' : ''}`}>
+            <button
+              type="button"
+              className="btn-pass"
+              onClick={handlePass}
+              disabled={!canPass || roundOver || !isHumanTurn}
+              title={!canPass && isHumanTurn ? '本轮为你领出，不可跳过' : ''}
+            >
+              {!canPass && isHumanTurn ? '请领出' : '不要'}
+            </button>
 
-          <button
-            type="button"
-            className="btn-hint"
-            onClick={handleHint}
-            disabled={!isHumanTurn || roundOver || hintOptions.length === 0}
-          >
-            💡 提示{hintOptions.length > 1 ? ` (${(hintIndex % hintOptions.length) + 1}/${hintOptions.length})` : ''}
-          </button>
+            <button
+              type="button"
+              className="btn-hint"
+              onClick={handleHint}
+              disabled={!isHumanTurn || roundOver || hintOptions.length === 0}
+            >
+              💡 提示{hintOptions.length > 1 ? ` (${(hintIndex % hintOptions.length) + 1}/${hintOptions.length})` : ''}
+            </button>
 
-          <button
-            type="button"
-            className={`btn-play ${selectionAnalysis.valid && selectedCards.length > 0 ? 'pulse-ready' : ''}`}
-            onClick={handlePlay}
-            disabled={!isHumanTurn || roundOver || !selectionAnalysis.valid}
-            title={selectedCards.length > 0 ? selectionAnalysis.detail : undefined}
-          >
-            {selectedCards.length > 0
-              ? selectionAnalysis.valid
-                ? `出牌 (${selectedCards.length})`
-                : '无法出牌'
-              : '出牌'}
-          </button>
+            <button
+              type="button"
+              className={`btn-play ${selectionAnalysis.valid && selectedCards.length > 0 ? 'pulse-ready' : ''}`}
+              onClick={handlePlay}
+              disabled={!isHumanTurn || roundOver || !selectionAnalysis.valid}
+              title={selectedCards.length > 0 ? selectionAnalysis.detail : undefined}
+            >
+              {selectedCards.length > 0
+                ? selectionAnalysis.valid
+                  ? `出牌 (${selectedCards.length})`
+                  : '无法出牌'
+                : '出牌'}
+            </button>
 
-          {/* 快捷短语互动入口 */}
-          <ChatInteraction onSend={game.sendChat} />
-        </div>
+            {/* 快捷短语互动入口 */}
+            <ChatInteraction onSend={game.sendChat} />
+          </div>
+        )
       )}
 
       {/* 报单/报双全屏横幅警报 */}
@@ -1154,8 +1197,11 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
           playedCards={game.playedCards ?? []}
           matchSession={game.matchSession}
           humanSeat={humanSeat}
+          room={room}
           soundEnabled={soundEnabled}
           onToggleSound={toggleSound}
+          onShareRoom={handleShareRoom}
+          copiedInvite={copiedInvite}
           onShowRules={() => setShowRules(true)}
           onShowHonor={() => setShowHonorModal(true)}
           onResetMatch={() => setShowResetConfirm(true)}

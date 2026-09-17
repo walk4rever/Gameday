@@ -167,7 +167,48 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
   );
 
   const game = useMemo<UseGameResult | null>(() => {
-    if (!message || message.type !== 'state') return null;
+    if (!message) return null;
+
+    if (message.type === 'lobby') {
+      const lobbyMsg = message;
+      return {
+        humanSeat: lobbyMsg.you,
+        level: '2',
+        hand: [],
+        seats: lobbyMsg.seats.map((s) => ({
+          seat: s.seat,
+          name: s.name,
+          isBot: s.isBot,
+          connected: s.connected,
+          status: s.status,
+          handCount: 0
+        })),
+        currentTurn: 0,
+        lastPlay: null,
+        currentTrick: [],
+        legalMoves: [],
+        isHumanTurn: false,
+        canPass: false,
+        roundOver: false,
+        finishOrder: [],
+        paused: null,
+        waitingToStart: true,
+        onStartGame: start,
+        error,
+        clearError: () => setError(null),
+        playSelected: () => {},
+        pass: () => {},
+        restart: start,
+        resetMatch: () => send({ type: 'reset_match' }),
+        payTribute: () => {},
+        returnTribute: () => {},
+        delegateBot,
+        dissolve,
+        sendChat
+      };
+    }
+
+    if (message.type !== 'state') return null;
     const state: StateMessage = message;
 
     const humanSeat = state.you.seat;
@@ -204,6 +245,8 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
         return order;
       })(),
       paused: state.paused ?? null,
+      waitingToStart: false,
+      onStartGame: start,
       tribute: state.tribute ?? null,
       tributePhase: state.tributePhase ?? null,
       matchSession: state.matchSession ?? null,
@@ -221,15 +264,12 @@ export function useOnlineGame(serverUrl: string, name: string): UseOnlineGameRes
       dissolve,
       sendChat
     };
-  }, [message, error, send, delegateBot, dissolve, sendChat, incomingChat]);
+  }, [message, error, send, start, delegateBot, dissolve, sendChat, incomingChat]);
 
   const view: OnlinePhase = useMemo(() => {
     if (game) return { phase: 'playing', game };
-    if (message?.type === 'lobby') {
-      return { phase: 'lobby', you: message.you, seats: message.seats, start, error };
-    }
     return { phase: 'connecting' };
-  }, [game, message, start, error]);
+  }, [game]);
 
   return { status, view, leave };
 }

@@ -33,6 +33,8 @@ export interface UseGameResult {
   roundOver: boolean;
   finishOrder: Seat[];
   paused: PausedInfo | null;
+  waitingToStart?: boolean;
+  onStartGame?: () => void;
   tribute?: {
     type: 'none' | 'anti_tribute' | 'single' | 'double';
     description: string;
