@@ -24,8 +24,7 @@ import {
   sortHand
 } from './cardDisplay.js';
 import type { SeatView, UseGameResult } from './game/types.js';
-import { CardCounter } from './components/CardCounter.js';
-import { HeaderMenu } from './components/HeaderMenu.js';
+import { GameSettingsModal } from './components/GameSettingsModal.js';
 import { ChatInteraction } from './components/ChatInteraction.js';
 import { HonorModal } from './HonorModal.js';
 import { recordRoundFinished } from './honorLedger.js';
@@ -285,19 +284,11 @@ function SeatCard({
             <span className="seat-online-dot" title="在线" />
           )}
         </div>
-        {/* 东西南北方位清晰指示徽章 */}
-        <span
-          className={`seat-compass-badge dir-${dirMeta.teamCode.toLowerCase()}`}
-          title={`${dirMeta.name}方位 (${dirMeta.team})`}
-        >
-          {dirMeta.name}
-        </span>
         {active && <span className="thinking-beacon" title="行动中" />}
       </div>
 
       <div className="seat-main-info">
         <div className="seat-top-row">
-          <span className="seat-dir-prefix">[{dirMeta.name}]</span>
           <span className="seat-display-name">{seat.name}</span>
           {!seat.isBot && seat.status === 'offline' && (
             <span className="seat-status-pill pill-offline">🔴 掉线</span>
@@ -372,6 +363,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
   const { isLandscape, needsForcedRotation, toggleOrientation } = useOrientation();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -793,7 +785,7 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
     >
       {banner}
 
-      {/* 顶部常驻会话极简栏（计分牌与退出已收纳进设置菜单，实现极致清爽） */}
+      {/* 顶部常驻极简信息与统一设置栏 */}
       <div className="game-top-bar">
         <div className="game-top-brand">
           <span className="game-brand-level">
@@ -803,96 +795,14 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         </div>
 
         <div className="top-bar-controls">
-          {/* 极简折叠记牌器 */}
-          <CardCounter
-            level={level}
-            myHand={game.hand}
-            playedCards={game.playedCards ?? []}
-          />
-          {/* 快捷设置与游戏选项（已收纳对局计分板与退出按钮） */}
-          <HeaderMenu
-            title="游戏设置与选项"
-            triggerIcon="⚙️"
-            triggerLabel="设置"
-            headerContent={
-              <div className="menu-scoreboard-card">
-                <div className="menu-scoreboard-header">
-                  <span className="menu-score-title">🏆 对局比赛计分牌</span>
-                  <span className="menu-score-round">第 {game.matchSession?.roundNumber ?? 1} 副</span>
-                </div>
-                <div className="menu-score-teams-row">
-                  <div className={`menu-team-box ${(humanSeat % 2) === 0 ? 'is-my-team' : ''}`}>
-                    <div className="menu-team-name-row">
-                      <span className="menu-team-name">🛡️ 南北队</span>
-                      {(humanSeat % 2) === 0 && <span className="menu-my-badge">我方</span>}
-                      {game.matchSession?.dealerTeam === 0 && <span className="menu-dealer-badge">庄</span>}
-                    </div>
-                    <div className="menu-team-rank-val">打 {game.matchSession?.teamRanks[0] ?? level}</div>
-                  </div>
-                  <div className="menu-vs-divider">VS</div>
-                  <div className={`menu-team-box ${(humanSeat % 2) === 1 ? 'is-my-team' : ''}`}>
-                    <div className="menu-team-name-row">
-                      <span className="menu-team-name">⚔️ 东西队</span>
-                      {(humanSeat % 2) === 1 && <span className="menu-my-badge">我方</span>}
-                      {game.matchSession?.dealerTeam === 1 && <span className="menu-dealer-badge">庄</span>}
-                    </div>
-                    <div className="menu-team-rank-val">打 {game.matchSession?.teamRanks[1] ?? '2'}</div>
-                  </div>
-                </div>
-              </div>
-            }
-            items={[
-              {
-                id: 'honor',
-                icon: '🏆',
-                label: '家庭战绩荣誉榜',
-                sublabel: '查看历届积分、胜率与胜场',
-                onClick: () => setShowHonorModal(true)
-              },
-              {
-                id: 'sound',
-                icon: soundEnabled ? '🔊' : '🔇',
-                label: '游戏音效',
-                sublabel: soundEnabled ? '点击关闭出牌与获胜音效' : '点击开启沉浸式音效',
-                badge: soundEnabled ? '开' : '静音',
-                onClick: toggleSound
-              },
-              {
-                id: 'orientation',
-                icon: '📱',
-                label: isLandscape ? '切换为竖屏' : '切换为横屏',
-                sublabel: isLandscape ? '适合单手浏览' : '宽屏视野，防止误触',
-                badge: isLandscape ? '横屏' : '竖屏',
-                onClick: toggleOrientation
-              },
-              {
-                id: 'rules',
-                icon: '📖',
-                label: '掼蛋规则速查',
-                sublabel: '牌型等级与进贡规则',
-                onClick: () => setShowRules(true)
-              },
-              {
-                id: 'reset',
-                icon: '🔄',
-                label: '从打 2 重新开局',
-                sublabel: '重置双方级数从头开始',
-                onClick: () => setShowResetConfirm(true)
-              },
-              ...(onExit
-                ? [
-                    {
-                      id: 'exit',
-                      icon: '🚪',
-                      label: '退出当前牌桌',
-                      sublabel: '返回房间选桌大厅',
-                      danger: true,
-                      onClick: () => setShowExitConfirm(true)
-                    }
-                  ]
-                : [])
-            ]}
-          />
+          <button
+            type="button"
+            className="top-settings-btn"
+            onClick={() => setShowSettingsModal(true)}
+            aria-label="打开设置与计分看板"
+          >
+            ⚙️ 设置
+          </button>
         </div>
       </div>
 
@@ -947,22 +857,14 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
             handleClearSelection();
           }}
         >
-          {/* 台面中央暗纹：四方位罗盘水印与级牌标识 */}
+          {/* 台面中央暗纹：极简级牌水印 */}
           <div className="felt-center-watermark">
-            <div className="felt-compass-cross">
-              <span className="compass-point compass-n">北</span>
-              <span className="compass-point compass-s">南</span>
-              <span className="compass-point compass-w">西</span>
-              <span className="compass-point compass-e">东</span>
-              <div className="compass-crosshair" />
-            </div>
             <span className="felt-watermark-text">GUANDAN</span>
             <span className="felt-watermark-sub">级牌 {level} · 红桃配</span>
           </div>
 
           {/* 北：搭档席位 */}
           <div className="table-zone zone-top">
-            <span className="zone-compass-tag">{SEAT_DIRECTIONS[topSeat].name} · 搭档方位</span>
             <SeatCard
               seat={seatAt(seats, topSeat)}
               active={currentTurn === topSeat && !roundOver}
@@ -980,7 +882,6 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
 
           {/* 西/东：上家席位 */}
           <div className="table-zone zone-left">
-            <span className="zone-compass-tag">{SEAT_DIRECTIONS[leftSeat].name} · 对手</span>
             <SeatCard
               seat={seatAt(seats, leftSeat)}
               active={currentTurn === leftSeat && !roundOver}
@@ -998,7 +899,6 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
 
           {/* 东/西：下家席位 */}
           <div className="table-zone zone-right">
-            <span className="zone-compass-tag">{SEAT_DIRECTIONS[rightSeat].name} · 对手</span>
             <SeatCard
               seat={seatAt(seats, rightSeat)}
               active={currentTurn === rightSeat && !roundOver}
@@ -1022,16 +922,13 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
               isWinning={lastPlay?.seat === humanSeat}
               isLandscape={isLandscape}
             />
-            <div className="self-seat-row">
-              <span className="zone-compass-tag">{SEAT_DIRECTIONS[humanSeat].name} · 自己</span>
-              <SeatCard
-                seat={seatAt(seats, humanSeat)}
-                active={isHumanTurn && !roundOver}
-                role="self"
-                finishedRank={finishOrder.includes(humanSeat) ? finishOrder.indexOf(humanSeat) : undefined}
-                chatBubble={chatBubbles[humanSeat]}
-              />
-            </div>
+            <SeatCard
+              seat={seatAt(seats, humanSeat)}
+              active={isHumanTurn && !roundOver}
+              role="self"
+              finishedRank={finishOrder.includes(humanSeat) ? finishOrder.indexOf(humanSeat) : undefined}
+              chatBubble={chatBubbles[humanSeat]}
+            />
           </div>
         </div>
       </div>
@@ -1216,6 +1113,26 @@ export function GameScreen({ game, banner, onExit }: GameScreenProps) {
         <div className="fullscreen-alert-banner pulse-alarm">
           <span>{alertNotice.text}</span>
         </div>
+      )}
+
+      {/* 游戏设置与计分看板全局模态窗 */}
+      {showSettingsModal && (
+        <GameSettingsModal
+          level={level}
+          myHand={hand}
+          playedCards={game.playedCards ?? []}
+          matchSession={game.matchSession}
+          humanSeat={humanSeat}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+          isLandscape={isLandscape}
+          onToggleOrientation={toggleOrientation}
+          onShowRules={() => setShowRules(true)}
+          onShowHonor={() => setShowHonorModal(true)}
+          onResetMatch={() => setShowResetConfirm(true)}
+          onExit={onExit ? () => setShowExitConfirm(true) : undefined}
+          onClose={() => setShowSettingsModal(false)}
+        />
       )}
 
       {/* 规则指南弹窗 */}
