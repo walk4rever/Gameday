@@ -812,7 +812,7 @@ export function GameScreen({ game, room, banner, onExit }: GameScreenProps) {
           onClick={() => setShowSettingsModal(true)}
           role="button"
           tabIndex={0}
-          title="点击查看详细计分与记牌器"
+          title="点击打开设置与记牌器"
         >
           <div className="unified-teams-group">
             <div className={`unified-team-item ${isMyTeamNS ? 'is-me' : ''}`}>

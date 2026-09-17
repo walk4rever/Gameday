@@ -8,7 +8,7 @@ export interface GameSettingsModalProps {
   myHand: Card[];
   playedCards: Card[];
   matchSession?: MatchSessionInfo | null;
-  humanSeat: Seat;
+  humanSeat?: Seat;
   room?: string;
   soundEnabled: boolean;
   onToggleSound: () => void;
@@ -36,8 +36,6 @@ export function GameSettingsModal({
   level,
   myHand,
   playedCards,
-  matchSession,
-  humanSeat,
   room,
   soundEnabled,
   onToggleSound,
@@ -49,7 +47,7 @@ export function GameSettingsModal({
   onExit,
   onClose
 }: GameSettingsModalProps) {
-  // 计分牌/未出大牌分布数据计算
+  // 记牌器 / 未出大牌分布数据计算
   const counterStats = useMemo<CounterCardStat[]>(() => {
     const isLevelA = level === 'A';
     const isLevelK = level === 'K';
@@ -168,7 +166,6 @@ export function GameSettingsModal({
   }, [level, myHand, playedCards]);
 
   const totalPlayed = playedCards.length;
-  const isMyTeamNS = (humanSeat % 2) === 0;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -177,7 +174,7 @@ export function GameSettingsModal({
         <div className="settings-modal-header">
           <div className="settings-modal-title">
             <span className="settings-icon">⚙️</span>
-            <span>游戏设置与计分看板</span>
+            <span>游戏设置</span>
           </div>
           <button type="button" className="settings-close-btn" onClick={onClose} aria-label="关闭">
             ✕
@@ -185,45 +182,10 @@ export function GameSettingsModal({
         </div>
 
         <div className="settings-modal-body">
-          {/* 一、对局比分牌 */}
+          {/* 一、场上记牌器 / 未出大牌统计 */}
           <section className="settings-section">
             <div className="settings-section-title">
-              <span>🏆 比赛计分牌</span>
-              <span className="settings-round-tag">第 {matchSession?.roundNumber ?? 1} 副 · 级牌 {level}</span>
-            </div>
-            <div className="settings-scoreboard-grid">
-              <div className={`settings-team-card ${isMyTeamNS ? 'is-my-team' : ''}`}>
-                <div className="settings-team-head">
-                  <span className="team-badge-icon">🛡️</span>
-                  <span className="team-name">南北队</span>
-                  {isMyTeamNS && <span className="my-team-pill">我方</span>}
-                  {matchSession?.dealerTeam === 0 && <span className="dealer-pill">庄</span>}
-                </div>
-                <div className="settings-team-level">
-                  打 <strong>{matchSession?.teamRanks[0] ?? level}</strong>
-                </div>
-              </div>
-
-              <div className="settings-score-vs">VS</div>
-
-              <div className={`settings-team-card ${!isMyTeamNS ? 'is-my-team' : ''}`}>
-                <div className="settings-team-head">
-                  <span className="team-badge-icon">⚔️</span>
-                  <span className="team-name">东西队</span>
-                  {!isMyTeamNS && <span className="my-team-pill">我方</span>}
-                  {matchSession?.dealerTeam === 1 && <span className="dealer-pill">庄</span>}
-                </div>
-                <div className="settings-team-level">
-                  打 <strong>{matchSession?.teamRanks[1] ?? '2'}</strong>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 二、场上计分牌 / 未出大牌统计 */}
-          <section className="settings-section">
-            <div className="settings-section-title">
-              <span>🧮 计分牌 · 未出大牌统计</span>
+              <span>🧮 记牌器 · 未出大牌统计</span>
               <span className="settings-section-hint">全场已打出 {totalPlayed} 张牌</span>
             </div>
             <div className="settings-counter-grid">
@@ -254,10 +216,10 @@ export function GameSettingsModal({
             </div>
           </section>
 
-          {/* 三、快捷选项与游戏操作 */}
+          {/* 二、快捷选项与游戏设置 */}
           <section className="settings-section">
             <div className="settings-section-title">
-              <span>🎮 游戏操作与视图</span>
+              <span>🎮 快捷选项与游戏设置</span>
             </div>
             <div className="settings-actions-grid">
               {/* 音效切换 */}
